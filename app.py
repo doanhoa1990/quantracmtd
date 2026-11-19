@@ -188,7 +188,7 @@ def fetch_all_stations():
         ))
 
         latest_data = {
-            ""last_updated": (datetime.utcnow() + timedelta(hours=7)).strftime("%H:%M:%S - %d/%m/%Y (Gio VN)"),
+            "last_updated": (datetime.utcnow() + timedelta(hours=7)).strftime("%H:%M:%S - %d/%m/%Y (Gio VN)"),
             "status": f"Ket noi Real-time thanh cong ({len(station_results)} tram)",
             "raw_sample": json.dumps(items[0] if items else data_json, ensure_ascii=False, indent=2)[:2500],
             "stations": station_results
