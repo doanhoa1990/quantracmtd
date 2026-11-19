@@ -1,0 +1,46 @@
+{
+  "ntfy_topic": "MTDQT",
+  "interval_minutes": 5,
+  "stations": [
+    {
+      "name": "Masteri Thao Dien - Tram CT1-2 (1)",
+      "key": "kv1__cong_ty_co_phan_dau_tu_thao_dienkno_cao_tang_ct12_1"
+    },
+    {
+      "name": "Masteri Thao Dien - Tram CT3 (2)",
+      "key": "kv1__cong_ty_co_phan_dau_tu_thao_dienkno_cao_tang_ct3_2"
+    }
+  ],
+  "thresholds": {
+    "pH": {
+      "min": 5.5,
+      "max": 9,
+      "unit": "-"
+    },
+    "COD": {
+      "min": 0,
+      "max": 75,
+      "unit": "mg/L"
+    },
+    "TSS": {
+      "min": 0,
+      "max": 60,
+      "unit": "mg/L"
+    },
+    "NH4": {
+      "min": 0,
+      "max": 5,
+      "unit": "mg/L"
+    },
+    "Temp": {
+      "min": 10,
+      "max": 40,
+      "unit": "C"
+    },
+    "Flow": {
+      "min": 0,
+      "max": 500,
+      "unit": "m3/h"
+    }
+  }
+}
