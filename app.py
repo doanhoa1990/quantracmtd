@@ -55,18 +55,22 @@ def send_ntfy_alert(title: str, message: str, is_urgent: bool = True):
     topic = cfg.get("ntfy_topic", "").strip()
     if not topic:
         return
-    url = f"https://ntfy.sh/{topic}"
-    headers = {
-        "Title": title.encode("utf-8"),
-        "Priority": "urgent" if is_urgent else "default",
-        "Tags": "rotating_light,warning" if is_urgent else "white_check_mark"
-    }
     try:
-        requests.post(url, data=message.encode("utf-8"), headers=headers, timeout=10)
-        print(f"[NTFY SENT -> {topic}] {title}")
+        r = requests.post(
+            "https://ntfy.sh",
+            json={
+                "topic": topic,
+                "title": title,
+                "message": message,
+                "priority": 5 if is_urgent else 3,
+                "tags": ["rotating_light", "warning"] if is_urgent else ["white_check_mark"]
+            },
+            headers={"User-Agent": "MasteriThaoDien-Monitor/1.0"},
+            timeout=10
+        )
+        print(f"[NTFY SENT -> {topic}] Status={r.status_code} | Resp={r.text[:100]}")
     except Exception as e:
         print("Loi gui ntfy:", e)
-
 def parse_metrics_from_record(record: dict, thresholds: dict):
     flat_values = {}
     logs = record.get("measuringLogs") or record.get("MeasuringLogs") or record.get("lastLog", {}).get("measuringLogs")
