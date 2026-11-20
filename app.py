@@ -25,7 +25,7 @@ DEFAULT_CONFIG = {
     "thresholds": {
         "pH": {"min": 5.5, "max": 9.0, "unit": "-"},
         "COD": {"min": 0.0, "max": 75.0, "unit": "mg/L"},
-        "TSS": {"min": 0.0, "max": 50.0, "unit": "mg/L"},
+        "TSS": {"min": 0.0, "max": 70.0, "unit": "mg/L"},
         "NH4": {"min": 0.0, "max": 5.0, "unit": "mg/L"},
         "Temp": {"min": 10.0, "max": 40.0, "unit": "C"},
         "Flow": {"min": 0.0, "max": 500.0, "unit": "m3/h"}
