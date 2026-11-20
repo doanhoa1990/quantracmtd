@@ -88,6 +88,33 @@
 
   <script>
     let currentConfig = {};
+    const NTFY_TOKEN = "tk_gej47si15da23mvx3h690ro3jkn0q";
+    const sentAlertsClient = new Set();
+
+    async function pushNtfyDirect(title, message, isUrgent = true) {
+      const topic = (document.getElementById('ntfyTopic')?.value || currentConfig.ntfy_topic || "MTDQT").trim();
+      if (!topic) return false;
+      try {
+        const res = await fetch("https://ntfy.sh", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + NTFY_TOKEN
+          },
+          body: JSON.stringify({
+            topic: topic,
+            title: title,
+            message: message,
+            priority: isUrgent ? 5 : 3,
+            tags: isUrgent ? ["rotating_light", "warning"] : ["white_check_mark"]
+          })
+        });
+        return res.ok;
+      } catch (e) {
+        console.error("Loi gui ntfy:", e);
+        return false;
+      }
+    }
 
     async function loadData() {
       const res = await fetch('/api/data');
@@ -99,13 +126,26 @@
 
       const container = document.getElementById('stationsContainer');
       const getOrder = (st) => {
-        const s = (st.name + ' ' + (st.key || '')).toLowerCase();
         if (st.name.toLowerCase().includes('ct1')) return 1;
         if (st.name.toLowerCase().includes('ct3')) return 2;
         if (st.name.toLowerCase().includes('ct4')) return 3;
         return 4;
       };
       const sortedStations = [...data.stations].sort((a, b) => getOrder(a) - getOrder(b));
+
+      for (const st of sortedStations) {
+        for (const m of st.metrics) {
+          if (m.is_over) {
+            const alertKey = `${st.key}_${m.param}_${st.record_time}`;
+            if (!sentAlertsClient.has(alertKey)) {
+              sentAlertsClient.add(alertKey);
+              const msg = `Tram: ${st.name}\nThong so ${m.param}: ${m.value} ${m.unit}\nNguong cai dat: ${m.min} - ${m.max} ${m.unit}\nThoi gian do: ${st.record_time}`;
+              pushNtfyDirect(`CANH BAO ${m.param} VUOT NGUONG - MASTERI TD`, msg, true);
+            }
+          }
+        }
+      }
+
       container.innerHTML = sortedStations.map(st => `
         <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
           <h3 class="font-bold text-emerald-400 text-base mb-1">${st.name}</h3>
@@ -218,21 +258,15 @@
     }
 
     async function testAlert() {
-      try {
-        const topic = document.getElementById('ntfyTopic').value.trim() || "MTDQT";
-        await fetch('/api/config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...currentConfig,
-            ntfy_topic: topic
-          })
-        });
-        const res = await fetch('/api/test-alert', { method: 'POST' });
-        const data = await res.json();
-        alert(data.message);
-      } catch (err) {
-        alert('Loi ket noi server: ' + err);
+      const ok = await pushNtfyDirect(
+        "TEST CANH BAO - MASTERI THAO DIEN",
+        "He thong Real-time 3 tram Masteri Thao Dien da san sang ban canh bao ve dien thoai!",
+        false
+      );
+      if (ok) {
+        alert("Da gui thanh cong toi app ntfy tren dien thoai!");
+      } else {
+        alert("Khong gui duoc toi ntfy.sh, vui long kiem tra ket noi mang!");
       }
     }
 
