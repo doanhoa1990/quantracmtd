@@ -1,4 +1,3 @@
-
 import asyncio
 import json
 import os
@@ -17,6 +16,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 REALTIME_API = "https://thongtinquantrac.moitruonghcm.vn/api/station-auto-logs?stationType=&shareIds=695e073e750cc3001b730f1d,695e071c750cc3001b730f01,695d1735750cc3001b730582"
 CONFIG_FILE = "config.json"
+NTFY_TOKEN = "tk_gej47si15da23mvx3h690ro3jkn0q"
 
 DEFAULT_CONFIG = {
     "ntfy_topic": "MTDQT",
@@ -38,6 +38,8 @@ latest_data = {
     "raw_sample": "",
     "stations": []
 }
+
+sent_alerts_cache = set()
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -65,12 +67,16 @@ def send_ntfy_alert(title: str, message: str, is_urgent: bool = True):
                 "priority": 5 if is_urgent else 3,
                 "tags": ["rotating_light", "warning"] if is_urgent else ["white_check_mark"]
             },
-            headers={"User-Agent": "MasteriThaoDien-Monitor/1.0"},
+            headers={
+                "User-Agent": "MasteriThaoDien-Monitor/1.0",
+                "Authorization": f"Bearer {NTFY_TOKEN}"
+            },
             timeout=10
         )
         print(f"[NTFY SENT -> {topic}] Status={r.status_code} | Resp={r.text[:100]}")
     except Exception as e:
         print("Loi gui ntfy:", e)
+
 def parse_metrics_from_record(record: dict, thresholds: dict):
     flat_values = {}
     logs = record.get("measuringLogs") or record.get("MeasuringLogs") or record.get("lastLog", {}).get("measuringLogs")
@@ -119,7 +125,7 @@ def parse_metrics_from_record(record: dict, thresholds: dict):
     return metrics_list
 
 def fetch_all_stations():
-    global latest_data
+    global latest_data, sent_alerts_cache
     cfg = load_config()
     thresholds = cfg["thresholds"]
 
@@ -170,13 +176,18 @@ def fetch_all_stations():
 
             for m in metrics:
                 if m["is_over"]:
-                    msg = (
-                        f"Tram: {st_name}\n"
-                        f"Thong so {m['param']}: {m['value']} {m['unit']}\n"
-                        f"Nguong cai dat: {m['min']} - {m['max']} {m['unit']}\n"
-                        f"Thoi gian do: {rec_time}"
-                    )
-                    send_ntfy_alert(f"CANH BAO {m['param']} VUOT NGUONG - MASTERI TD", msg, is_urgent=True)
+                    alert_id = f"{st_key}_{m['param']}_{rec_time}"
+                    if alert_id not in sent_alerts_cache:
+                        msg = (
+                            f"Tram: {st_name}\n"
+                            f"Thong so {m['param']}: {m['value']} {m['unit']}\n"
+                            f"Nguong cai dat: {m['min']} - {m['max']} {m['unit']}\n"
+                            f"Thoi gian do: {rec_time}"
+                        )
+                        send_ntfy_alert(f"CANH BAO {m['param']} VUOT NGUONG - MASTERI TD", msg, is_urgent=True)
+                        sent_alerts_cache.add(alert_id)
+                        if len(sent_alerts_cache) > 500:
+                            sent_alerts_cache.clear()
 
             station_results.append({
                 "name": st_name,
