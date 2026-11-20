@@ -19,7 +19,7 @@ REALTIME_API = "https://thongtinquantrac.moitruonghcm.vn/api/station-auto-logs?s
 CONFIG_FILE = "config.json"
 
 DEFAULT_CONFIG = {
-    "ntfy_topic": "masteri-thaodien-quantrac-2026-bql",
+    "ntfy_topic": "MTDQT",
     "interval_minutes": 1,
     "stations": [],
     "thresholds": {
