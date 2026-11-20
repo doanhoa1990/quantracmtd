@@ -42,7 +42,6 @@
         <div class="flex flex-wrap gap-1.5" id="paramSelector">
           <button onclick="selectChartParam('TSS')" data-param="TSS" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white">TSS</button>
           <button onclick="selectChartParam('pH')" data-param="pH" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600">pH</button>
-          
           <button onclick="selectChartParam('Flow')" data-param="Flow" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600">Luu luong</button>
           <button onclick="selectChartParam('Temp')" data-param="Temp" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600">Nhiet do</button>
         </div>
@@ -175,6 +174,7 @@
   <script>
     let currentConfig = {};
     let latestDashboard = null;
+    let latestStations = [];
     let selectedParam = 'TSS';
     let trendChartInstance = null;
     const NTFY_TOKEN = "tk_gej47si15da23mvx3h690ro3jkn0q";
@@ -262,7 +262,7 @@
         </tr>
       `).join('') : '<tr><td colspan="5" class="py-2 px-2 text-slate-400">Chua ghi nhan lan vuot nguong nao trong ngay.</td></tr>';
 
-     // Chuan bi du lieu ve bieu do duong (gom block 5 phut & khop dung station_key)
+      // Chuan bi du lieu ve bieu do duong (gom block 5 phut & lay dung key tu 3 the tram o tren)
       const round5Min = (timeStr) => {
         if (!timeStr || !timeStr.includes(':')) return timeStr;
         const [hh, mm] = timeStr.split(':');
@@ -276,257 +276,5 @@
       }));
       const timeLabels = [...new Set(points.map(p => p.bucketTime))];
 
-      // Lay chinh xac station_key theo thu tu da sap xep o tren (CT1&2 -> CT3 -> CT4)
-      const cfgStations = [...(currentConfig.stations || [])].sort((a, b) => {
-        const ord = s => s.name.toLowerCase().includes('ct1') ? 1 : (s.name.toLowerCase().includes('ct3') ? 2 : (s.name.toLowerCase().includes('ct4') ? 3 : 4));
-        return ord(a) - ord(b);
-      });
-      const keyCT12 = cfgStations[0]?.key || '';
-      const keyCT3  = cfgStations[1]?.key || '';
-      const keyCT4  = cfgStations[2]?.key || '';
-
-      const buildSeries = (targetKey) => {
-        return timeLabels.map(t => {
-          const found = points.find(p => p.bucketTime === t && p.station_key === targetKey && p.values[selectedParam] !== undefined);
-          return found ? found.values[selectedParam] : null;
-        });
-      };
-
-      const dsCT12 = buildSeries(keyCT12);
-      const dsCT3  = buildSeries(keyCT3);
-      const dsCT4  = buildSeries(keyCT4);
-      const limitLine = timeLabels.map(() => st.limit_max ?? null);
-
-      const ctx = document.getElementById('trendChart').getContext('2d');
-      if (trendChartInstance) trendChartInstance.destroy();
-
-      trendChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: timeLabels,
-          datasets: [
-            {
-              label: 'CT1&2',
-              data: dsCT12,
-              borderColor: '#34d399',
-              backgroundColor: '#34d399',
-              borderWidth: 2,
-              tension: 0.25,
-              spanGaps: true
-            },
-            {
-              label: 'CT3',
-              data: dsCT3,
-              borderColor: '#38bdf8',
-              backgroundColor: '#38bdf8',
-              borderWidth: 2,
-              tension: 0.25,
-              spanGaps: true
-            },
-            {
-              label: 'CT4',
-              data: dsCT4,
-              borderColor: '#fbbf24',
-              backgroundColor: '#fbbf24',
-              borderWidth: 2,
-              tension: 0.25,
-              spanGaps: true
-            },
-            {
-              label: `Nguong Max (${st.limit_max ?? ''})`,
-              data: limitLine,
-              borderColor: '#f87171',
-              borderWidth: 1.5,
-              borderDash: [6, 6],
-              pointRadius: 0,
-              fill: false
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: { labels: { color: '#cbd5e1', font: { size: 12 } } }
-          },
-          scales: {
-            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } },
-            y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } }
-          }
-        }
-      });
-    }
-
-    async function loadData() {
-      const res = await fetch('/api/data');
-      const data = await res.json();
-      
-      document.getElementById('lastUpdated').innerText = 'Cap nhat: ' + data.last_updated;
-      document.getElementById('statusBadge').innerText = data.status;
-      document.getElementById('rawSample').innerText = data.raw_sample || 'Chua co mau JSON';
-
-      const container = document.getElementById('stationsContainer');
-      const getOrder = (st) => {
-        if (st.name.toLowerCase().includes('ct1')) return 1;
-        if (st.name.toLowerCase().includes('ct3')) return 2;
-        if (st.name.toLowerCase().includes('ct4')) return 3;
-        return 4;
-      };
-      const sortedStations = [...data.stations].sort((a, b) => getOrder(a) - getOrder(b));
-
-      for (const st of sortedStations) {
-        for (const m of st.metrics) {
-          if (m.is_over) {
-            const alertKey = `${st.key}_${m.param}_${st.record_time}`;
-            if (!sentAlertsClient.has(alertKey)) {
-              sentAlertsClient.add(alertKey);
-              const msg = `Tram: ${st.name}\nThong so ${m.param}: ${m.value} ${m.unit}\nNguong cai dat: ${m.min} - ${m.max} ${m.unit}\nThoi gian do: ${st.record_time}`;
-              pushNtfyDirect(`CANH BAO ${m.param} VUOT NGUONG - MASTERI TD`, msg, true);
-            }
-          }
-        }
-      }
-
-      container.innerHTML = sortedStations.map(st => `
-        <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
-          <h3 class="font-bold text-emerald-400 text-base mb-1">${st.name}</h3>
-          <p class="text-[11px] text-slate-400 mb-3 border-b border-slate-700 pb-2">Thoi gian do: ${st.record_time}</p>
-          <div class="space-y-2.5">
-            ${st.metrics.length ? st.metrics.map(m => `
-              <div class="flex justify-between items-center p-2.5 rounded-lg ${m.is_over ? 'bg-red-950/80 border border-red-500 animate-pulse' : 'bg-slate-900/80'}">
-                <div>
-                  <span class="font-semibold text-sm">${m.param}</span>
-                  <span class="block text-[11px] text-slate-400">Nguong: ${m.min} - ${m.max} ${m.unit}</span>
-                </div>
-                <div class="text-right">
-                  <span class="text-lg font-bold ${m.is_over ? 'text-red-400' : 'text-emerald-300'}">${m.value}</span>
-                  <span class="text-xs text-slate-400 ml-1">${m.unit}</span>
-                </div>
-              </div>
-            `).join('') : '<p class="text-xs text-amber-300">Chua khop ten thong so. Mo muc "Xem cau truc JSON goc" ben duoi de kiem tra ten bien.</p>'}
-          </div>
-        </div>
-      `).join('');
-
-      latestDashboard = data.dashboard;
-      renderDashboard();
-    }
-
-    function renderStationInputs(stations) {
-      const box = document.getElementById('stationListConfig');
-      box.innerHTML = stations.map((st, idx) => `
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-2 station-row">
-          <input type="text" placeholder="Ten tram" value="${st.name}" class="st-name md:col-span-4 bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-white" />
-          <input type="text" placeholder="stationKey" value="${st.key}" class="st-key md:col-span-7 bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-slate-300 font-mono" />
-          <button onclick="this.parentElement.remove()" class="md:col-span-1 bg-red-900/50 hover:bg-red-800 text-red-300 rounded text-xs py-1.5">Xoa</button>
-        </div>
-      `).join('');
-    }
-
-    function addStationRow() {
-      const box = document.getElementById('stationListConfig');
-      const div = document.createElement('div');
-      div.className = 'grid grid-cols-1 md:grid-cols-12 gap-2 station-row';
-      div.innerHTML = `
-        <input type="text" placeholder="Ten tram moi" class="st-name md:col-span-4 bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-white" />
-        <input type="text" placeholder="Dan stationKey vao day" class="st-key md:col-span-7 bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-slate-300 font-mono" />
-        <button onclick="this.parentElement.remove()" class="md:col-span-1 bg-red-900/50 hover:bg-red-800 text-red-300 rounded text-xs py-1.5">Xoa</button>
-      `;
-      box.appendChild(div);
-    }
-
-    async function loadConfig() {
-      const res = await fetch('/api/config');
-      currentConfig = await res.json();
-      document.getElementById('ntfyTopic').value = currentConfig.ntfy_topic;
-      document.getElementById('intervalMin').value = currentConfig.interval_minutes;
-      renderStationInputs(currentConfig.stations || []);
-
-      const tbody = document.getElementById('thresholdTable');
-      tbody.innerHTML = Object.entries(currentConfig.thresholds).map(([param, val]) => `
-        <tr>
-          <td class="py-2.5 px-3 font-semibold text-emerald-300">${param}</td>
-          <td class="py-2.5 px-3 text-slate-400">${val.unit}</td>
-          <td class="py-2.5 px-3">
-            <input type="number" step="0.1" id="min_${param}" value="${val.min}" class="w-28 bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-white" />
-          </td>
-          <td class="py-2.5 px-3">
-            <input type="number" step="0.1" id="max_${param}" value="${val.max}" class="w-28 bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-white" />
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    async function saveConfig() {
-      const updatedThresholds = {};
-      for (const [param, val] of Object.entries(currentConfig.thresholds)) {
-        const minVal = parseFloat(document.getElementById(`min_${param}`).value);
-        const maxVal = parseFloat(document.getElementById(`max_${param}`).value);
-        updatedThresholds[param] = {
-          min: isNaN(minVal) ? val.min : minVal,
-          max: isNaN(maxVal) ? val.max : maxVal,
-          unit: val.unit
-        };
-      }
-
-      const stations = [];
-      document.querySelectorAll('.station-row').forEach(row => {
-        const name = row.querySelector('.st-name').value.trim();
-        const key = row.querySelector('.st-key').value.trim();
-        if (key) stations.push({ name: name || key, key });
-      });
-
-      const payload = {
-        ntfy_topic: document.getElementById('ntfyTopic').value.trim() || "MTDQT",
-        interval_minutes: parseFloat(document.getElementById('intervalMin').value) || 5,
-        stations,
-        thresholds: updatedThresholds
-      };
-
-      const res = await fetch('/api/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        alert('Da luu cau hinh thanh cong!');
-      } else {
-        alert('Loi luu cau hinh: ' + res.status);
-      }
-    }
-
-    async function forceRefresh() {
-      document.getElementById('statusBadge').innerText = 'Dang keo API...';
-      await fetch('/api/refresh', { method: 'POST' });
-      await loadData();
-    }
-
-    async function testAlert() {
-      const ok = await pushNtfyDirect(
-        "TEST CANH BAO - MASTERI THAO DIEN",
-        "He thong Real-time 3 tram Masteri Thao Dien da san sang ban canh bao ve dien thoai!",
-        false
-      );
-      if (ok) {
-        alert("Da gui thanh cong toi app ntfy tren dien thoai!");
-      } else {
-        alert("Khong gui duoc toi ntfy.sh, vui long kiem tra ket noi mang!");
-      }
-    }
-
-    let autoTimer = null;
-    async function startAutoLoop() {
-      await loadConfig();
-      await forceRefresh();
-      const mins = Math.max(1, parseFloat(currentConfig.interval_minutes) || 5);
-      if (autoTimer) clearInterval(autoTimer);
-      autoTimer = setInterval(async () => {
-        await fetch('/api/refresh', { method: 'POST' });
-        await loadData();
-      }, mins * 60 * 1000);
-    }
-    startAutoLoop();
-  </script>
-</body>
-</html>
+      const keyCT12 = latestStations[0]?.key || '';
+      const keyCT3  = latestStations
