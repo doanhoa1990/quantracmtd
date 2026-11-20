@@ -229,10 +229,14 @@
       document.getElementById('kpiTotalFlow').innerText = latestDashboard.total_flow_m3 ?? 0;
 
       const flowMap = latestDashboard.flow_by_station || {};
-      const flowParts = Object.entries(flowMap).map(([k, v]) => {
-        const shortName = k.toLowerCase().includes('ct1') ? 'CT1&2' : (k.toLowerCase().includes('ct3') ? 'CT3' : (k.toLowerCase().includes('ct4') ? 'CT4' : k));
-        return `${shortName}: ${v}m³`;
-      });
+      const orderedFlow = [];
+      for (const [k, v] of Object.entries(flowMap)) {
+        const kl = k.toLowerCase();
+        if (kl.includes('ct1')) orderedFlow[0] = `CT1&2: ${v}m³`;
+        else if (kl.includes('ct4') || kl.includes('ct3_2')) orderedFlow[2] = `CT4: ${v}m³`;
+        else if (kl.includes('ct3')) orderedFlow[1] = `CT3: ${v}m³`;
+      }
+      const flowParts = orderedFlow.filter(Boolean);
       document.getElementById('kpiFlowDetail').innerText = flowParts.length ? flowParts.join(' • ') : 'Dang tich luy du lieu...';
 
       const st = (latestDashboard.stats || {})[selectedParam] || {};
@@ -269,9 +273,13 @@
         });
       };
 
-      const dsCT12 = buildSeries(p => p.station_name.toLowerCase().includes('ct1') || p.station_key.toLowerCase().includes('ct12'));
-      const dsCT3  = buildSeries(p => p.station_name.toLowerCase().includes('ct3') || p.station_key.toLowerCase().includes('ct3_1'));
-      const dsCT4  = buildSeries(p => p.station_name.toLowerCase().includes('ct4') || p.station_key.toLowerCase().includes('ct3_2'));
+      const isCT12 = p => p.station_key.toLowerCase().includes('ct12') || p.station_name.toLowerCase().includes('ct1');
+      const isCT4  = p => p.station_key.toLowerCase().includes('ct3_2') || p.station_name.toLowerCase().includes('ct4');
+      const isCT3  = p => !isCT4(p) && (p.station_key.toLowerCase().includes('ct3_1') || p.station_name.toLowerCase().includes('ct3'));
+
+      const dsCT12 = buildSeries(isCT12);
+      const dsCT3  = buildSeries(isCT3);
+      const dsCT4  = buildSeries(isCT4);
       const limitLine = timeLabels.map(() => st.limit_max ?? null);
 
       const ctx = document.getElementById('trendChart').getContext('2d');
