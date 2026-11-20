@@ -36,10 +36,29 @@ latest_data = {
     "last_updated": "Chua co du lieu",
     "status": "Dang khoi dong...",
     "raw_sample": "",
-    "stations": []
+    "stations": [],
+    "dashboard": {}
 }
 
-sent_alerts_cache = set()
+# Bo dem RAM thong ke trong ngay (tu reset khi qua ngay moi)
+daily_state = {
+    "date": "",
+    "seen_records": set(),
+    "points": [],
+    "exceed_logs": [],
+    "flow_tracker": {}
+}
+
+def get_vn_now():
+    return datetime.utcnow() + timedelta(hours=7)
+
+def reset_daily_if_needed(today_str: str):
+    if daily_state["date"] != today_str:
+        daily_state["date"] = today_str
+        daily_state["seen_records"] = set()
+        daily_state["points"] = []
+        daily_state["exceed_logs"] = []
+        daily_state["flow_tracker"] = {}
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -124,10 +143,50 @@ def parse_metrics_from_record(record: dict, thresholds: dict):
             })
     return metrics_list
 
+def build_dashboard_summary(thresholds: dict):
+    # Tinh trung binh va Max trong ngay
+    param_vals = {p: [] for p in thresholds.keys()}
+    for pt in daily_state["points"]:
+        for p, v in pt["values"].items():
+            if p in param_vals:
+                param_vals[p].append(v)
+
+    stats = {}
+    for p, limits in thresholds.items():
+        arr = param_vals.get(p, [])
+        stats[p] = {
+            "avg": round(sum(arr) / len(arr), 2) if arr else None,
+            "max": round(max(arr), 2) if arr else None,
+            "min": round(min(arr), 2) if arr else None,
+            "unit": limits["unit"],
+            "limit_min": limits["min"],
+            "limit_max": limits["max"]
+        }
+
+    flow_by_station = {}
+    total_flow_all = 0.0
+    for st_key, info in daily_state["flow_tracker"].items():
+        vol = round(info.get("total_m3", 0.0), 1)
+        flow_by_station[info["name"]] = vol
+        total_flow_all += vol
+
+    return {
+        "date": daily_state["date"],
+        "exceed_count": len(daily_state["exceed_logs"]),
+        "exceed_logs": list(reversed(daily_state["exceed_logs"]))[:50],
+        "total_flow_m3": round(total_flow_all, 1),
+        "flow_by_station": flow_by_station,
+        "stats": stats,
+        "points": daily_state["points"][-300:]
+    }
+
 def fetch_all_stations():
-    global latest_data, sent_alerts_cache
+    global latest_data
     cfg = load_config()
     thresholds = cfg["thresholds"]
+    now_vn = get_vn_now()
+    today_str = now_vn.strftime("%d/%m/%Y")
+    reset_daily_if_needed(today_str)
 
     headers = {
         "accept": "application/json",
@@ -169,10 +228,58 @@ def fetch_all_stations():
             try:
                 dt_vn = datetime.fromisoformat(str(raw_time).replace("Z", "+00:00")) + timedelta(hours=7)
                 rec_time = dt_vn.strftime("%H:%M:%S - %d/%m/%Y (Gio VN)")
+                short_time = dt_vn.strftime("%H:%M")
             except Exception:
+                dt_vn = now_vn
                 rec_time = str(raw_time) or "Real-time"
+                short_time = now_vn.strftime("%H:%M")
 
             metrics = parse_metrics_from_record(log_obj, thresholds)
+
+            # Ghi nhan vao bo dem RAM trong ngay neu la ban ghi moi
+            rec_id = f"{st_key}_{rec_time}"
+            if rec_id not in daily_state["seen_records"] and metrics:
+                daily_state["seen_records"].add(rec_id)
+                val_map = {m["param"]: m["value"] for m in metrics}
+                daily_state["points"].append({
+                    "station_key": st_key,
+                    "station_name": st_name,
+                    "time": short_time,
+                    "full_time": rec_time,
+                    "values": val_map
+                })
+
+                # Dem so lan vuot nguong
+                for m in metrics:
+                    if m["is_over"]:
+                        daily_state["exceed_logs"].append({
+                            "station": st_name,
+                            "param": m["param"],
+                            "value": m["value"],
+                            "unit": m["unit"],
+                            "limit": f"{m['min']} - {m['max']}",
+                            "time": rec_time
+                        })
+
+                # Tich phan luu luong trong ngay (m3)
+                if "Flow" in val_map:
+                    flow_val = float(val_map["Flow"])
+                    tracker = daily_state["flow_tracker"].get(st_key)
+                    if tracker is None:
+                        # Khoi tao moc dau tien trong ngay (uoc tinh 5 phut = 5/60 gio)
+                        daily_state["flow_tracker"][st_key] = {
+                            "name": st_name,
+                            "last_dt": dt_vn,
+                            "last_flow": flow_val,
+                            "total_m3": flow_val * (5.0 / 60.0)
+                        }
+                    else:
+                        dt_hours = (dt_vn - tracker["last_dt"]).total_seconds() / 3600.0
+                        if 0 < dt_hours <= 2.0:
+                            avg_q = (tracker["last_flow"] + flow_val) / 2.0
+                            tracker["total_m3"] += avg_q * dt_hours
+                        tracker["last_dt"] = dt_vn
+                        tracker["last_flow"] = flow_val
 
             station_results.append({
                 "name": st_name,
@@ -188,10 +295,11 @@ def fetch_all_stations():
         ))
 
         latest_data = {
-            "last_updated": (datetime.utcnow() + timedelta(hours=7)).strftime("%H:%M:%S - %d/%m/%Y (Gio VN)"),
+            "last_updated": now_vn.strftime("%H:%M:%S - %d/%m/%Y (Gio VN)"),
             "status": f"Ket noi Real-time thanh cong ({len(station_results)} tram)",
             "raw_sample": json.dumps(items[0] if items else data_json, ensure_ascii=False, indent=2)[:2500],
-            "stations": station_results
+            "stations": station_results,
+            "dashboard": build_dashboard_summary(thresholds)
         }
         print(f"[{latest_data['last_updated']}] Da cap nhat Real-time {len(station_results)} tram.")
 
