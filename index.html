@@ -270,12 +270,18 @@
       }
     }
 
-    loadConfig();
-    forceRefresh();
-    setInterval(async () => {
-      await fetch('/api/refresh', { method: 'POST' });
-      await loadData();
-    }, 15000);
+  let autoTimer = null;
+async function startAutoLoop() {
+  await loadConfig();
+  await forceRefresh();
+  const mins = Math.max(1, parseFloat(currentConfig.interval_minutes) || 5);
+  if (autoTimer) clearInterval(autoTimer);
+  autoTimer = setInterval(async () => {
+    await fetch('/api/refresh', { method: 'POST' });
+    await loadData();
+  }, mins * 60 * 1000);
+}
+startAutoLoop();
   </script>
 </body>
 </html>
