@@ -47,7 +47,7 @@
         </div>
         <div>
           <label class="block text-xs text-slate-400 mb-1">Chu ky tu dong kiem tra (Phut)</label>
-          <input id="intervalMin" type="number" min="1" max="60" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white" />
+          <input id="intervalMin" type="number" step="0.05" min="0.1" max="60" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white" />
         </div>
       </div>
 
@@ -234,7 +234,7 @@
 
       const payload = {
         ntfy_topic: document.getElementById('ntfyTopic').value.trim() || "MTDQT",
-        interval_minutes: parseInt(document.getElementById('intervalMin').value) || 1,
+        interval_minutes: parseFloat(document.getElementById('intervalMin').value) || 0.25,
         stations,
         thresholds: updatedThresholds
       };
@@ -271,8 +271,11 @@
     }
 
     loadConfig();
-    loadData();
-    setInterval(loadData, 5000);
+    forceRefresh();
+    setInterval(async () => {
+      await fetch('/api/refresh', { method: 'POST' });
+      await loadData();
+    }, 15000);
   </script>
 </body>
 </html>
