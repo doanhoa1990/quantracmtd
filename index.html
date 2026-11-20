@@ -176,9 +176,11 @@
     async function saveConfig() {
       const updatedThresholds = {};
       for (const [param, val] of Object.entries(currentConfig.thresholds)) {
+        const minVal = parseFloat(document.getElementById(`min_${param}`).value);
+        const maxVal = parseFloat(document.getElementById(`max_${param}`).value);
         updatedThresholds[param] = {
-          min: parseFloat(document.getElementById(`min_${param}`).value),
-          max: parseFloat(document.getElementById(`max_${param}`).value),
+          min: isNaN(minVal) ? val.min : minVal,
+          max: isNaN(maxVal) ? val.max : maxVal,
           unit: val.unit
         };
       }
@@ -191,18 +193,22 @@
       });
 
       const payload = {
-        ntfy_topic: document.getElementById('ntfyTopic').value.trim(),
-        interval_minutes: parseInt(document.getElementById('intervalMin').value) || 5,
+        ntfy_topic: document.getElementById('ntfyTopic').value.trim() || "MTDQT",
+        interval_minutes: parseInt(document.getElementById('intervalMin').value) || 1,
         stations,
         thresholds: updatedThresholds
       };
 
-      await fetch('/api/config', {
+      const res = await fetch('/api/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      alert('Da luu cau hinh thanh cong!');
+      if (res.ok) {
+        alert('Da luu cau hinh thanh cong!');
+      } else {
+        alert('Loi luu cau hinh: ' + res.status);
+      }
     }
 
     async function forceRefresh() {
@@ -212,10 +218,22 @@
     }
 
     async function testAlert() {
-      await saveConfig();
-      const res = await fetch('/api/test-alert', { method: 'POST' });
-      const data = await res.json();
-      alert(data.message);
+      try {
+        const topic = document.getElementById('ntfyTopic').value.trim() || "MTDQT";
+        await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...currentConfig,
+            ntfy_topic: topic
+          })
+        });
+        const res = await fetch('/api/test-alert', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message);
+      } catch (err) {
+        alert('Loi ket noi server: ' + err);
+      }
     }
 
     loadConfig();
