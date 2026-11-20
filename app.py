@@ -20,12 +20,12 @@ NTFY_TOKEN = "tk_gej47si15da23mvx3h690ro3jkn0q"
 
 DEFAULT_CONFIG = {
     "ntfy_topic": "MTDQT",
-    "interval_minutes": 0.25,
+    "interval_minutes": 5,
     "stations": [],
     "thresholds": {
         "pH": {"min": 5.5, "max": 9.0, "unit": "-"},
         "COD": {"min": 0.0, "max": 75.0, "unit": "mg/L"},
-        "TSS": {"min": 0.0, "max": 70.0, "unit": "mg/L"},
+        "TSS": {"min": 0.0, "max": 60.0, "unit": "mg/L"},
         "NH4": {"min": 0.0, "max": 5.0, "unit": "mg/L"},
         "Temp": {"min": 10.0, "max": 40.0, "unit": "C"},
         "Flow": {"min": 0.0, "max": 500.0, "unit": "m3/h"}
@@ -203,7 +203,7 @@ async def background_scheduler():
     while True:
         await asyncio.to_thread(fetch_all_stations)
         cfg = load_config()
-        await asyncio.sleep(cfg.get("interval_minutes", 1) * 60)
+        await asyncio.sleep(cfg.get("interval_minutes", 5) * 60)
 
 @app.on_event("startup")
 async def startup_event():
