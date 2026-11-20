@@ -20,7 +20,7 @@ NTFY_TOKEN = "tk_gej47si15da23mvx3h690ro3jkn0q"
 
 DEFAULT_CONFIG = {
     "ntfy_topic": "MTDQT",
-    "interval_minutes": 1,
+    "interval_minutes": 0.25,
     "stations": [],
     "thresholds": {
         "pH": {"min": 5.5, "max": 9.0, "unit": "-"},
@@ -174,21 +174,6 @@ def fetch_all_stations():
 
             metrics = parse_metrics_from_record(log_obj, thresholds)
 
-            for m in metrics:
-                if m["is_over"]:
-                    alert_id = f"{st_key}_{m['param']}_{rec_time}"
-                    if alert_id not in sent_alerts_cache:
-                        msg = (
-                            f"Tram: {st_name}\n"
-                            f"Thong so {m['param']}: {m['value']} {m['unit']}\n"
-                            f"Nguong cai dat: {m['min']} - {m['max']} {m['unit']}\n"
-                            f"Thoi gian do: {rec_time}"
-                        )
-                        send_ntfy_alert(f"CANH BAO {m['param']} VUOT NGUONG - MASTERI TD", msg, is_urgent=True)
-                        sent_alerts_cache.add(alert_id)
-                        if len(sent_alerts_cache) > 500:
-                            sent_alerts_cache.clear()
-
             station_results.append({
                 "name": st_name,
                 "key": st_key,
@@ -239,7 +224,7 @@ def get_config():
 
 class ConfigUpdate(BaseModel):
     ntfy_topic: str
-    interval_minutes: int
+    interval_minutes: float
     stations: list = []
     thresholds: dict
 
