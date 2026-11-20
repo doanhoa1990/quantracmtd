@@ -262,24 +262,39 @@
         </tr>
       `).join('') : '<tr><td colspan="5" class="py-2 px-2 text-slate-400">Chua ghi nhan lan vuot nguong nao trong ngay.</td></tr>';
 
-      // Chuan bi du lieu ve bieu do duong
-      const points = latestDashboard.points || [];
-      const timeLabels = [...new Set(points.map(p => p.time))];
+     // Chuan bi du lieu ve bieu do duong (gom block 5 phut & khop dung station_key)
+      const round5Min = (timeStr) => {
+        if (!timeStr || !timeStr.includes(':')) return timeStr;
+        const [hh, mm] = timeStr.split(':');
+        const m5 = Math.floor(parseInt(mm, 10) / 5) * 5;
+        return `${hh.padStart(2, '0')}:${String(m5).padStart(2, '0')}`;
+      };
 
-      const buildSeries = (matchFn) => {
+      const points = (latestDashboard.points || []).map(p => ({
+        ...p,
+        bucketTime: round5Min(p.time)
+      }));
+      const timeLabels = [...new Set(points.map(p => p.bucketTime))];
+
+      // Lay chinh xac station_key theo thu tu da sap xep o tren (CT1&2 -> CT3 -> CT4)
+      const cfgStations = [...(currentConfig.stations || [])].sort((a, b) => {
+        const ord = s => s.name.toLowerCase().includes('ct1') ? 1 : (s.name.toLowerCase().includes('ct3') ? 2 : (s.name.toLowerCase().includes('ct4') ? 3 : 4));
+        return ord(a) - ord(b);
+      });
+      const keyCT12 = cfgStations[0]?.key || '';
+      const keyCT3  = cfgStations[1]?.key || '';
+      const keyCT4  = cfgStations[2]?.key || '';
+
+      const buildSeries = (targetKey) => {
         return timeLabels.map(t => {
-          const found = points.find(p => p.time === t && matchFn(p) && p.values[selectedParam] !== undefined);
+          const found = points.find(p => p.bucketTime === t && p.station_key === targetKey && p.values[selectedParam] !== undefined);
           return found ? found.values[selectedParam] : null;
         });
       };
 
-      const isCT12 = p => p.station_key.toLowerCase().includes('ct12') || p.station_name.toLowerCase().includes('ct1');
-      const isCT4  = p => p.station_key.toLowerCase().includes('ct3_2') || p.station_name.toLowerCase().includes('ct4');
-      const isCT3  = p => !isCT4(p) && (p.station_key.toLowerCase().includes('ct3_1') || p.station_name.toLowerCase().includes('ct3'));
-
-      const dsCT12 = buildSeries(isCT12);
-      const dsCT3  = buildSeries(isCT3);
-      const dsCT4  = buildSeries(isCT4);
+      const dsCT12 = buildSeries(keyCT12);
+      const dsCT3  = buildSeries(keyCT3);
+      const dsCT4  = buildSeries(keyCT4);
       const limitLine = timeLabels.map(() => st.limit_max ?? null);
 
       const ctx = document.getElementById('trendChart').getContext('2d');
