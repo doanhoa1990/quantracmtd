@@ -9,15 +9,35 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
   <div class="max-w-6xl mx-auto p-4 md:p-6">
+    <!-- Banner Bao Dong Coi TSS -->
+    <div id="tssAlarmBanner" class="hidden mb-6 bg-red-600 text-white p-4 rounded-xl border-2 border-amber-300 shadow-2xl flex flex-col md:flex-row justify-between items-center gap-4 animate-pulse">
+      <div class="flex items-center gap-3">
+        <span class="text-3xl">🚨</span>
+        <div>
+          <h2 class="font-extrabold text-base md:text-lg uppercase tracking-wide">CANH BAO KHAN CAP: TSS VUOT NGUONG!</h2>
+          <p id="tssAlarmText" class="text-xs md:text-sm font-medium text-amber-100 mt-0.5">Dang phat hien chi so TSS vuot nguong cho phep...</p>
+        </div>
+      </div>
+      <button onclick="acknowledgeAlarm()" class="bg-slate-950 hover:bg-slate-800 text-amber-300 font-bold px-5 py-2.5 rounded-lg text-sm border border-amber-400 shrink-0 shadow-lg">
+        Xac nhan tat coi
+      </button>
+    </div>
+
     <!-- Header -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-800 p-5 rounded-xl border border-slate-700 mb-6 gap-4">
       <div>
         <h1 class="text-xl md:text-2xl font-bold text-emerald-400">GIAM SAT QUAN TRAC TU DONG</h1>
         <p class="text-sm text-slate-400 mt-1">Masteri Thao Dien • Ket noi API truc tiep & Canh bao ntfy</p>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-2.5">
         <span id="statusBadge" class="text-xs px-3 py-1.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700">Dang tai...</span>
-        <button onclick="forceRefresh()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+        <button id="audioToggleBtn" onclick="toggleAudioSystem()" class="bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5">
+          <span>🔔</span> <span id="audioBtnText">Bam bat loa</span>
+        </button>
+        <button onclick="testSirenSound()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg text-xs font-medium transition">
+          Thu loa
+        </button>
+        <button onclick="unlockAudio(); forceRefresh();" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
           Lay du lieu ngay
         </button>
       </div>
@@ -47,8 +67,9 @@
         </div>
       </div>
 
-      <!-- 4 The Counter KPI -->
+      <!-- 4 The Counter KPI Dong Nhat Cho Moi Tab -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <!-- The 1: So lan vuot nguong -->
         <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
           <span class="text-xs text-slate-400 block">So lan vuot nguong hom nay</span>
           <div class="flex items-baseline justify-between mt-1">
@@ -58,24 +79,53 @@
           <span class="text-[11px] text-slate-500 mt-1 block">Tinh tren ca 3 tram</span>
         </div>
 
+        <!-- The 2: Gia tri hien tai tung tram theo tab dang chon -->
         <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
-          <span class="text-xs text-slate-400 block">Tong luu luong trong ngay</span>
-          <div class="mt-1">
-            <span id="kpiTotalFlow" class="text-2xl font-bold text-emerald-400">0</span>
-            <span class="text-xs text-slate-400 ml-1">m³</span>
+          <div class="flex justify-between items-center">
+            <span class="text-xs text-slate-400">Hien tai (<span id="kpiCurLabel">TSS</span>)</span>
+            <span id="kpiCurUnit" class="text-[11px] text-slate-400">mg/L</span>
           </div>
-          <span id="kpiFlowDetail" class="text-[11px] text-slate-400 mt-1 block truncate">Chua co du lieu luu luong</span>
+          <div class="grid grid-cols-3 gap-2 mt-2 text-center">
+            <div class="bg-slate-800/80 rounded-lg py-1.5 px-1">
+              <span class="block text-[10px] text-emerald-400 font-semibold">CT1&2</span>
+              <span id="kpiCurCT12" class="text-base font-bold text-emerald-300">--</span>
+            </div>
+            <div class="bg-slate-800/80 rounded-lg py-1.5 px-1">
+              <span class="block text-[10px] text-sky-400 font-semibold">CT3</span>
+              <span id="kpiCurCT3" class="text-base font-bold text-emerald-300">--</span>
+            </div>
+            <div class="bg-slate-800/80 rounded-lg py-1.5 px-1">
+              <span class="block text-[10px] text-amber-400 font-semibold">CT4</span>
+              <span id="kpiCurCT4" class="text-base font-bold text-emerald-300">--</span>
+            </div>
+          </div>
+          <span id="kpiCurSub" class="text-[11px] text-slate-500 mt-1.5 block truncate">So lieu moi nhat tung tram</span>
         </div>
 
+        <!-- The 3: Trung binh ngay tung tram theo tab dang chon -->
         <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
-          <span class="text-xs text-slate-400 block">Trung binh ngay (<span id="kpiAvgLabel">TSS</span>)</span>
-          <div class="mt-1">
-            <span id="kpiAvgVal" class="text-2xl font-bold text-amber-300">--</span>
-            <span id="kpiAvgUnit" class="text-xs text-slate-400 ml-1">mg/L</span>
+          <div class="flex justify-between items-center">
+            <span class="text-xs text-slate-400">Trung binh ngay (<span id="kpiAvgLabel">TSS</span>)</span>
+            <span id="kpiAvgUnit" class="text-[11px] text-slate-400">mg/L</span>
           </div>
-          <span id="kpiMinVal" class="text-[11px] text-slate-500 mt-1 block">Thap nhat: --</span>
+          <div class="grid grid-cols-3 gap-2 mt-2 text-center">
+            <div class="bg-slate-800/80 rounded-lg py-1.5 px-1">
+              <span class="block text-[10px] text-emerald-400 font-semibold">CT1&2</span>
+              <span id="kpiAvgCT12" class="text-base font-bold text-amber-300">--</span>
+            </div>
+            <div class="bg-slate-800/80 rounded-lg py-1.5 px-1">
+              <span class="block text-[10px] text-sky-400 font-semibold">CT3</span>
+              <span id="kpiAvgCT3" class="text-base font-bold text-amber-300">--</span>
+            </div>
+            <div class="bg-slate-800/80 rounded-lg py-1.5 px-1">
+              <span class="block text-[10px] text-amber-400 font-semibold">CT4</span>
+              <span id="kpiAvgCT4" class="text-base font-bold text-amber-300">--</span>
+            </div>
+          </div>
+          <span id="kpiMinVal" class="text-[11px] text-slate-500 mt-1.5 block truncate">Thap nhat: --</span>
         </div>
 
+        <!-- The 4: Dinh cao nhat theo tab dang chon -->
         <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
           <span class="text-xs text-slate-400 block">Dinh cao nhat (<span id="kpiMaxLabel">TSS</span>)</span>
           <div class="mt-1">
@@ -180,6 +230,141 @@
     const NTFY_TOKEN = "tk_gej47si15da23mvx3h690ro3jkn0q";
     const sentAlertsClient = new Set();
 
+    // --- HE THONG COI BAO DONG AM THANH (WEB AUDIO API) ---
+    let audioCtx = null;
+    let audioEnabled = true;
+    let sirenTimer = null;
+    let isSirenPlaying = false;
+    let alarmAcked = false;
+    let lastAlarmSignature = "";
+
+    function unlockAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioCtx = new AudioContext();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      updateAudioButtonUI();
+    }
+
+    function updateAudioButtonUI() {
+      const btn = document.getElementById('audioToggleBtn');
+      const txt = document.getElementById('audioBtnText');
+      if (!btn || !txt) return;
+      if (!audioEnabled) {
+        btn.className = "bg-slate-700 hover:bg-slate-600 text-slate-300 px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5";
+        txt.innerText = "Loa dang tat";
+      } else if (audioCtx && audioCtx.state === 'running') {
+        btn.className = "bg-sky-700 hover:bg-sky-600 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5";
+        txt.innerText = "Loa san sang";
+      } else {
+        btn.className = "bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5";
+        txt.innerText = "Bam bat loa";
+      }
+    }
+
+    function toggleAudioSystem() {
+      unlockAudio();
+      audioEnabled = !audioEnabled;
+      if (!audioEnabled) stopSiren();
+      updateAudioButtonUI();
+    }
+
+    function playSingleAlarmPulse() {
+      if (!audioEnabled) return;
+      unlockAudio();
+      if (!audioCtx) return;
+
+      const now = audioCtx.currentTime;
+      [0, 0.35].forEach((offset, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(idx === 0 ? 880 : 1150, now + offset);
+
+        gain.gain.setValueAtTime(0.001, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.45, now + offset + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.30);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.31);
+      });
+    }
+
+    function testSirenSound() {
+      unlockAudio();
+      audioEnabled = true;
+      updateAudioButtonUI();
+      playSingleAlarmPulse();
+    }
+
+    function startSiren(detailsText) {
+      const banner = document.getElementById('tssAlarmBanner');
+      const textEl = document.getElementById('tssAlarmText');
+      if (banner && textEl) {
+        textEl.innerText = detailsText;
+        banner.classList.remove('hidden');
+      }
+      if (isSirenPlaying || !audioEnabled) return;
+      isSirenPlaying = true;
+      playSingleAlarmPulse();
+      sirenTimer = setInterval(() => {
+        if (!alarmAcked && audioEnabled) playSingleAlarmPulse();
+      }, 1400);
+    }
+
+    function stopSiren() {
+      isSirenPlaying = false;
+      if (sirenTimer) {
+        clearInterval(sirenTimer);
+        sirenTimer = null;
+      }
+    }
+
+    function acknowledgeAlarm() {
+      alarmAcked = true;
+      stopSiren();
+      const banner = document.getElementById('tssAlarmBanner');
+      if (banner) banner.classList.add('hidden');
+    }
+
+    function evaluateTssAlarm(sortedStations) {
+      const overList = [];
+      for (const st of sortedStations) {
+        for (const m of st.metrics) {
+          if (m.param.toUpperCase() === 'TSS' && m.is_over) {
+            overList.push(`${st.name}: ${m.value} ${m.unit} (Nguong Max: ${m.max})`);
+          }
+        }
+      }
+
+      if (overList.length > 0) {
+        const signature = overList.map(s => s.split(':')[0]).join('|');
+        if (signature !== lastAlarmSignature) {
+          alarmAcked = false;
+          lastAlarmSignature = signature;
+        }
+        if (!alarmAcked) startSiren(overList.join('  •  '));
+      } else {
+        alarmAcked = false;
+        lastAlarmSignature = "";
+        stopSiren();
+        const banner = document.getElementById('tssAlarmBanner');
+        if (banner) banner.classList.add('hidden');
+      }
+    }
+
+    document.addEventListener('click', () => {
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+        updateAudioButtonUI();
+      }
+    }, { passive: true });
+
     async function pushNtfyDirect(title, message, isUrgent = true) {
       const topic = (document.getElementById('ntfyTopic')?.value || currentConfig.ntfy_topic || "MTDQT").trim();
       if (!topic) return false;
@@ -226,25 +411,37 @@
       if (!latestDashboard) return;
       document.getElementById('dashDate').innerText = latestDashboard.date || '--/--/----';
       document.getElementById('kpiExceedCount').innerText = latestDashboard.exceed_count ?? 0;
-      document.getElementById('kpiTotalFlow').innerText = latestDashboard.total_flow_m3 ?? 0;
 
-      const flowMap = latestDashboard.flow_by_station || {};
-      const orderedFlow = [];
-      for (const [k, v] of Object.entries(flowMap)) {
-        const kl = k.toLowerCase();
-        if (kl.includes('ct1')) orderedFlow[0] = `CT1&2: ${v}m³`;
-        else if (kl.includes('ct4') || kl.includes('ct3_2')) orderedFlow[2] = `CT4: ${v}m³`;
-        else if (kl.includes('ct3')) orderedFlow[1] = `CT3: ${v}m³`;
-      }
-      const flowParts = orderedFlow.filter(Boolean);
-      document.getElementById('kpiFlowDetail').innerText = flowParts.length ? flowParts.join(' • ') : 'Dang tich luy du lieu...';
-const st = (latestDashboard.stats || {})[selectedParam] || {};
+      const st = (latestDashboard.stats || {})[selectedParam] || {};
+      const unitStr = st.unit || '';
+
+      // Cap nhat nhan & don vi cho ca 3 the theo tab dang chon
+      document.getElementById('kpiCurLabel').innerText = selectedParam;
+      document.getElementById('kpiCurUnit').innerText  = unitStr;
       document.getElementById('kpiAvgLabel').innerText = selectedParam;
+      document.getElementById('kpiAvgUnit').innerText  = unitStr;
       document.getElementById('kpiMaxLabel').innerText = selectedParam;
-      document.getElementById('kpiAvgVal').innerText = st.avg !== null && st.avg !== undefined ? st.avg : '--';
-      document.getElementById('kpiAvgUnit').innerText = st.unit || '';
+      document.getElementById('kpiMaxVal').innerText   = st.max !== null && st.max !== undefined ? st.max : '--';
+      document.getElementById('kpiMaxUnit').innerText  = unitStr;
+      document.getElementById('kpiLimitVal').innerText = `Nguong: ${st.limit_min ?? '--'} - ${st.limit_max ?? '--'} ${unitStr}`;
 
-      // Tinh trung binh rieng cho tung tram (CT1&2, CT3, CT4) tu points trong ngay
+      // The 2: Lay gia tri hien tai (moi nhat) cua tung tram theo tab dang chon
+      const getCurVal = (stationObj) => {
+        if (!stationObj || !stationObj.metrics) return '--';
+        const m = stationObj.metrics.find(item => item.param.toLowerCase() === selectedParam.toLowerCase());
+        return m && m.value !== undefined && m.value !== null ? m.value : '--';
+      };
+      document.getElementById('kpiCurCT12').innerText = getCurVal(latestStations[0]);
+      document.getElementById('kpiCurCT3').innerText  = getCurVal(latestStations[1]);
+      document.getElementById('kpiCurCT4').innerText  = getCurVal(latestStations[2]);
+
+      if (selectedParam === 'Flow') {
+        document.getElementById('kpiCurSub').innerText = `Tong luu luong ngay: ${latestDashboard.total_flow_m3 ?? 0} m³`;
+      } else {
+        document.getElementById('kpiCurSub').innerText = `So lieu do moi nhat tung tram`;
+      }
+
+      // The 3: Tinh trung binh ngay rieng cho tung tram theo tab dang chon
       const calcStationAvg = (targetKey) => {
         if (!targetKey) return '--';
         const vals = (latestDashboard.points || [])
@@ -255,18 +452,10 @@ const st = (latestDashboard.stats || {})[selectedParam] || {};
         const sum = vals.reduce((a, b) => a + b, 0);
         return (sum / vals.length).toFixed(2);
       };
-      const avgCT12 = calcStationAvg(latestStations[0]?.key);
-      const avgCT3  = calcStationAvg(latestStations[1]?.key);
-      const avgCT4  = calcStationAvg(latestStations[2]?.key);
-
-      document.getElementById('kpiMinVal').innerHTML = `
-        <span class="block text-slate-400 truncate">CT1&2: ${avgCT12} • CT3: ${avgCT3} • CT4: ${avgCT4}</span>
-        <span class="block text-slate-500 mt-0.5">Thap nhat: ${st.min !== null && st.min !== undefined ? st.min : '--'} ${st.unit || ''}</span>
-      `;
-      document.getElementById('kpiMaxVal').innerText = st.max !== null && st.max !== undefined ? st.max : '--';
-      document.getElementById('kpiMaxUnit').innerText = st.unit || '';
-      document.getElementById('kpiLimitVal').innerText = `Nguong: ${st.limit_min ?? '--'} - ${st.limit_max ?? '--'} ${st.unit || ''}`;
-      
+      document.getElementById('kpiAvgCT12').innerText = calcStationAvg(latestStations[0]?.key);
+      document.getElementById('kpiAvgCT3').innerText  = calcStationAvg(latestStations[1]?.key);
+      document.getElementById('kpiAvgCT4').innerText  = calcStationAvg(latestStations[2]?.key);
+      document.getElementById('kpiMinVal').innerText  = `Thap nhat: ${st.min !== null && st.min !== undefined ? st.min : '--'} ${unitStr}`;
 
       // Bang nhat ky vuot nguong
       const logs = latestDashboard.exceed_logs || [];
@@ -281,7 +470,7 @@ const st = (latestDashboard.stats || {})[selectedParam] || {};
         </tr>
       `).join('') : '<tr><td colspan="5" class="py-2 px-2 text-slate-400">Chua ghi nhan lan vuot nguong nao trong ngay.</td></tr>';
 
-      // Chuan bi du lieu ve bieu do duong (gom block 5 phut & lay dung key tu 3 the tram o tren)
+      // Chuan bi du lieu ve bieu do duong
       const round5Min = (timeStr) => {
         if (!timeStr || !timeStr.includes(':')) return timeStr;
         const [hh, mm] = timeStr.split(':');
@@ -296,7 +485,7 @@ const st = (latestDashboard.stats || {})[selectedParam] || {};
       const timeLabels = [...new Set(points.map(p => p.bucketTime))];
 
       const keyCT12 = latestStations[0]?.key || '';
-    const keyCT3  = latestStations[1]?.key || '';
+      const keyCT3  = latestStations[1]?.key || '';
       const keyCT4  = latestStations[2]?.key || '';
 
       const buildSeries = (targetKey) => {
@@ -401,6 +590,8 @@ const st = (latestDashboard.stats || {})[selectedParam] || {};
           }
         }
       }
+
+      evaluateTssAlarm(sortedStations);
 
       container.innerHTML = sortedStations.map(st => `
         <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
