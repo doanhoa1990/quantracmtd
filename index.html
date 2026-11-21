@@ -238,16 +238,35 @@
       }
       const flowParts = orderedFlow.filter(Boolean);
       document.getElementById('kpiFlowDetail').innerText = flowParts.length ? flowParts.join(' • ') : 'Dang tich luy du lieu...';
-
-      const st = (latestDashboard.stats || {})[selectedParam] || {};
+const st = (latestDashboard.stats || {})[selectedParam] || {};
       document.getElementById('kpiAvgLabel').innerText = selectedParam;
       document.getElementById('kpiMaxLabel').innerText = selectedParam;
       document.getElementById('kpiAvgVal').innerText = st.avg !== null && st.avg !== undefined ? st.avg : '--';
       document.getElementById('kpiAvgUnit').innerText = st.unit || '';
-      document.getElementById('kpiMinVal').innerText = `Thap nhat: ${st.min !== null && st.min !== undefined ? st.min : '--'} ${st.unit || ''}`;
+
+      // Tinh trung binh rieng cho tung tram (CT1&2, CT3, CT4) tu points trong ngay
+      const calcStationAvg = (targetKey) => {
+        if (!targetKey) return '--';
+        const vals = (latestDashboard.points || [])
+          .filter(p => p.station_key === targetKey && p.values && p.values[selectedParam] !== undefined && p.values[selectedParam] !== null)
+          .map(p => Number(p.values[selectedParam]))
+          .filter(v => !isNaN(v));
+        if (!vals.length) return '--';
+        const sum = vals.reduce((a, b) => a + b, 0);
+        return (sum / vals.length).toFixed(2);
+      };
+      const avgCT12 = calcStationAvg(latestStations[0]?.key);
+      const avgCT3  = calcStationAvg(latestStations[1]?.key);
+      const avgCT4  = calcStationAvg(latestStations[2]?.key);
+
+      document.getElementById('kpiMinVal').innerHTML = `
+        <span class="block text-slate-400 truncate">CT1&2: ${avgCT12} • CT3: ${avgCT3} • CT4: ${avgCT4}</span>
+        <span class="block text-slate-500 mt-0.5">Thap nhat: ${st.min !== null && st.min !== undefined ? st.min : '--'} ${st.unit || ''}</span>
+      `;
       document.getElementById('kpiMaxVal').innerText = st.max !== null && st.max !== undefined ? st.max : '--';
       document.getElementById('kpiMaxUnit').innerText = st.unit || '';
       document.getElementById('kpiLimitVal').innerText = `Nguong: ${st.limit_min ?? '--'} - ${st.limit_max ?? '--'} ${st.unit || ''}`;
+      
 
       // Bang nhat ky vuot nguong
       const logs = latestDashboard.exceed_logs || [];
