@@ -162,9 +162,19 @@
         </div>
       </div>
     </div>
+<!-- Thanh mo khoa cai dat -->
+    <div id="configLockBar" class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-3">
+      <div class="flex items-center gap-2.5 text-xs text-slate-400">
+        <span class="text-base">🔒</span>
+        <span>Khu vuc cai dat tram, nguong canh bao & ntfy dang duoc khoa bao ve.</span>
+      </div>
+      <button onclick="unlockConfigPanel()" class="bg-slate-700 hover:bg-amber-600 hover:text-slate-950 text-amber-300 font-semibold px-4 py-2 rounded-lg text-xs transition shrink-0">
+        Mo khoa cai dat (BQL)
+      </button>
+    </div>
 
-    <!-- Cai dat cau hinh -->
-    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+    <!-- Cai dat cau hinh (An mac dinh cho den khi nhap dung PIN) -->
+    <div id="configPanel" class="hidden bg-slate-800 p-6 rounded-xl border border-amber-600/50">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-3">
         <div>
           <h2 class="text-lg font-semibold text-amber-400">Cai dat tram, nguong canh bao & Dien thoai (ntfy)</h2>
