@@ -721,16 +721,56 @@
       }
     }
 
-    let autoTimer = null;
-    async function startAutoLoop() {
-      await loadConfig();
-      await forceRefresh();
-      const mins = Math.max(1, parseFloat(currentConfig.interval_minutes) || 5);
-      if (autoTimer) clearInterval(autoTimer);
-      autoTimer = setInterval(async () => {
+   let lastPullTimestamp = 0;
+    let lastPingTimestamp = 0;
+    let isPullingNow = false;
+
+    async function safePullAndRender(forceNow = false) {
+      if (isPullingNow) return;
+      const now = Date.now();
+      const intervalMs = Math.max(1, parseFloat(currentConfig.interval_minutes) || 5) * 60 * 1000;
+
+      // Ping giu server Render khong ngu dong moi 3 phut
+      if (now - lastPingTimestamp >= 3 * 60 * 1000) {
+        lastPingTimestamp = now;
+        fetch('/api/data').catch(() => {});
+      }
+
+      if (!forceNow && (now - lastPullTimestamp < intervalMs)) return;
+
+      isPullingNow = true;
+      try {
+        document.getElementById('statusBadge').innerText = 'Dang keo API...';
         await fetch('/api/refresh', { method: 'POST' });
         await loadData();
-      }, mins * 60 * 1000);
+        lastPullTimestamp = Date.now();
+      } catch (err) {
+        console.error('Loi keo du lieu tu dong, se thu lai sau 15s:', err);
+        document.getElementById('statusBadge').innerText = 'Mat ket noi - Dang thu lai...';
+      } finally {
+        isPullingNow = false;
+      }
+    }
+
+    async function startAutoLoop() {
+      try {
+        await loadConfig();
+      } catch (e) {
+        console.error('Loi tai config:', e);
+      }
+      await safePullAndRender(true);
+
+      // Kiem tra dong ho thuc moi 15 giay (chong bi trinh duyet dong bang)
+      setInterval(() => {
+        safePullAndRender(false);
+      }, 15 * 1000);
+
+      // Tu dong cap nhat ngay khi quay lai tab hoac mo man hinh
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          safePullAndRender(false);
+        }
+      });
     }
     startAutoLoop();
   </script>
