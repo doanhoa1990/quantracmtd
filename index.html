@@ -3,86 +3,89 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quan Trac Truc Tuyen - Masteri Thao Dien</title>
+  <title>Quan Trắc Trực Tuyến - Masteri Thảo Điền</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+  <!-- Từ khóa ẩn giữ nguyên để UptimeRobot nhận diện không bị gián đoạn -->
+  <span class="hidden">GIAM SAT</span>
+
   <div class="max-w-6xl mx-auto p-4 md:p-6">
-    <!-- Banner Bao Dong Coi TSS -->
+    <!-- Banner Báo Động Còi TSS -->
     <div id="tssAlarmBanner" class="hidden mb-6 bg-red-600 text-white p-4 rounded-xl border-2 border-amber-300 shadow-2xl flex flex-col md:flex-row justify-between items-center gap-4 animate-pulse">
       <div class="flex items-center gap-3">
         <span class="text-3xl">🚨</span>
         <div>
-          <h2 class="font-extrabold text-base md:text-lg uppercase tracking-wide">CANH BAO KHAN CAP: TSS VUOT NGUONG!</h2>
-          <p id="tssAlarmText" class="text-xs md:text-sm font-medium text-amber-100 mt-0.5">Dang phat hien chi so TSS vuot nguong cho phep...</p>
+          <h2 class="font-extrabold text-base md:text-lg uppercase tracking-wide">CẢNH BÁO KHẨN CẤP: TSS VƯỢT NGƯỠNG!</h2>
+          <p id="tssAlarmText" class="text-xs md:text-sm font-medium text-amber-100 mt-0.5">Đang phát hiện chỉ số TSS vượt ngưỡng cho phép...</p>
         </div>
       </div>
       <button onclick="acknowledgeAlarm()" class="bg-slate-950 hover:bg-slate-800 text-amber-300 font-bold px-5 py-2.5 rounded-lg text-sm border border-amber-400 shrink-0 shadow-lg">
-        Xac nhan tat coi
+        Xác nhận tắt còi
       </button>
     </div>
 
     <!-- Header -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-800 p-5 rounded-xl border border-slate-700 mb-6 gap-4">
       <div>
-        <h1 class="text-xl md:text-2xl font-bold text-emerald-400">GIAM SAT QUAN TRAC TU DONG</h1>
-        <p class="text-sm text-slate-400 mt-1">Masteri Thao Dien • Ket noi API truc tiep & Canh bao ntfy</p>
+        <h1 class="text-xl md:text-2xl font-bold text-emerald-400">GIÁM SÁT QUAN TRẮC TỰ ĐỘNG</h1>
+        <p class="text-sm text-slate-400 mt-1">Masteri Thảo Điền • Kết nối API trực tiếp & Cảnh báo ntfy</p>
       </div>
       <div class="flex flex-wrap items-center gap-2.5">
-        <span id="statusBadge" class="text-xs px-3 py-1.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700">Dang tai...</span>
+        <span id="statusBadge" class="text-xs px-3 py-1.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700">Đang tải...</span>
         <button id="audioToggleBtn" onclick="toggleAudioSystem()" class="bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5">
-          <span>🔔</span> <span id="audioBtnText">Bam bat loa</span>
+          <span>🔔</span> <span id="audioBtnText">Bấm bật loa</span>
         </button>
         <button onclick="testSirenSound()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg text-xs font-medium transition">
-          Thu loa
+          Thử loa
         </button>
         <button onclick="unlockAudio(); forceRefresh();" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
-          Lay du lieu ngay
+          Lấy dữ liệu ngay
         </button>
       </div>
     </div>
 
-    <!-- 3 Tram Real-time -->
+    <!-- 3 Trạm Real-time -->
     <div class="mb-8">
       <div class="flex justify-between items-center mb-3">
-        <h2 class="text-lg font-semibold text-slate-200">So lieu cac tram quan trac</h2>
-        <span id="lastUpdated" class="text-xs text-slate-400">Cap nhat: --:--</span>
+        <h2 class="text-lg font-semibold text-slate-200">Số liệu các trạm quan trắc</h2>
+        <span id="lastUpdated" class="text-xs text-slate-400">Cập nhật: --:--</span>
       </div>
       <div id="stationsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
     </div>
 
-    <!-- Dashboard Thong Ke & Bieu Do Trong Ngay -->
+    <!-- Dashboard Thống Kê & Biểu Đồ Trong Ngày -->
     <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 mb-8">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-3">
         <div>
-          <h2 class="text-lg font-semibold text-sky-400">Dashboard Thong Ke & Bieu Do Trong Ngay</h2>
-          <p class="text-xs text-slate-400">Tong hop nhanh tu luc mo phien giam sat trong ngay <span id="dashDate">--/--/----</span></p>
+          <h2 class="text-lg font-semibold text-sky-400">Dashboard Thống Kê & Biểu Đồ Trong Ngày</h2>
+          <p class="text-xs text-slate-400">Tổng hợp nhanh từ lúc mở phiên giám sát trong ngày <span id="dashDate">--/--/----</span></p>
         </div>
         <div class="flex flex-wrap gap-1.5" id="paramSelector">
           <button onclick="selectChartParam('TSS')" data-param="TSS" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white">TSS</button>
           <button onclick="selectChartParam('pH')" data-param="pH" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600">pH</button>
-          <button onclick="selectChartParam('Flow')" data-param="Flow" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600">Luu luong</button>
-          <button onclick="selectChartParam('Temp')" data-param="Temp" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600">Nhiet do</button>
+          <button onclick="selectChartParam('Flow')" data-param="Flow" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600">Lưu lượng</button>
+          <button onclick="selectChartParam('Temp')" data-param="Temp" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600">Nhiệt độ</button>
         </div>
       </div>
 
-      <!-- 4 The Counter KPI Dong Nhat Cho Moi Tab -->
+      <!-- 4 Thẻ Counter KPI Đồng Nhất Cho Mỗi Tab -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <!-- The 1: So lan vuot nguong -->
+        <!-- Thẻ 1: Số lần vượt ngưỡng -->
         <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
-          <span class="text-xs text-slate-400 block">So lan vuot nguong hom nay</span>
+          <span class="text-xs text-slate-400 block">Số lần vượt ngưỡng hôm nay</span>
           <div class="flex items-baseline justify-between mt-1">
             <span id="kpiExceedCount" class="text-2xl font-bold text-red-400">0</span>
-            <button onclick="toggleExceedTable()" class="text-xs text-sky-400 hover:underline">Xem chi tiet</button>
+            <button onclick="toggleExceedTable()" class="text-xs text-sky-400 hover:underline">Xem chi tiết</button>
           </div>
-          <span class="text-[11px] text-slate-500 mt-1 block">Tinh tren ca 3 tram</span>
+          <span class="text-[11px] text-slate-500 mt-1 block">Tính trên cả 3 trạm</span>
         </div>
 
-        <!-- The 2: Gia tri hien tai tung tram theo tab dang chon -->
+        <!-- Thẻ 2: Giá trị hiện tại từng trạm theo tab đang chọn -->
         <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
           <div class="flex justify-between items-center">
-            <span class="text-xs text-slate-400">Hien tai (<span id="kpiCurLabel">TSS</span>)</span>
+            <span class="text-xs text-slate-400">Hiện tại (<span id="kpiCurLabel">TSS</span>)</span>
             <span id="kpiCurUnit" class="text-[11px] text-slate-400">mg/L</span>
           </div>
           <div class="grid grid-cols-3 gap-2 mt-2 text-center">
@@ -99,13 +102,13 @@
               <span id="kpiCurCT4" class="text-base font-bold text-emerald-300">--</span>
             </div>
           </div>
-          <span id="kpiCurSub" class="text-[11px] text-slate-500 mt-1.5 block truncate">So lieu moi nhat tung tram</span>
+          <span id="kpiCurSub" class="text-[11px] text-slate-500 mt-1.5 block truncate">Số liệu mới nhất từng trạm</span>
         </div>
 
-        <!-- The 3: Trung binh ngay tung tram theo tab dang chon -->
+        <!-- Thẻ 3: Trung bình ngày từng trạm theo tab đang chọn -->
         <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
           <div class="flex justify-between items-center">
-            <span class="text-xs text-slate-400">Trung binh ngay (<span id="kpiAvgLabel">TSS</span>)</span>
+            <span class="text-xs text-slate-400">Trung bình ngày (<span id="kpiAvgLabel">TSS</span>)</span>
             <span id="kpiAvgUnit" class="text-[11px] text-slate-400">mg/L</span>
           </div>
           <div class="grid grid-cols-3 gap-2 mt-2 text-center">
@@ -122,32 +125,32 @@
               <span id="kpiAvgCT4" class="text-base font-bold text-amber-300">--</span>
             </div>
           </div>
-          <span id="kpiMinVal" class="text-[11px] text-slate-500 mt-1.5 block truncate">Thap nhat: --</span>
+          <span id="kpiMinVal" class="text-[11px] text-slate-500 mt-1.5 block truncate">Thấp nhất: --</span>
         </div>
 
-        <!-- The 4: Dinh cao nhat theo tab dang chon -->
+        <!-- Thẻ 4: Đỉnh cao nhất theo tab đang chọn -->
         <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
-          <span class="text-xs text-slate-400 block">Dinh cao nhat (<span id="kpiMaxLabel">TSS</span>)</span>
+          <span class="text-xs text-slate-400 block">Đỉnh cao nhất (<span id="kpiMaxLabel">TSS</span>)</span>
           <div class="mt-1">
             <span id="kpiMaxVal" class="text-2xl font-bold text-sky-300">--</span>
             <span id="kpiMaxUnit" class="text-xs text-slate-400 ml-1">mg/L</span>
           </div>
-          <span id="kpiLimitVal" class="text-[11px] text-slate-500 mt-1 block">Nguong cai dat: --</span>
+          <span id="kpiLimitVal" class="text-[11px] text-slate-500 mt-1 block">Ngưỡng cài đặt: --</span>
         </div>
       </div>
 
-      <!-- Bang chi tiet cac lan vuot nguong (an/hien) -->
+      <!-- Bảng chi tiết các lần vượt ngưỡng (ẩn/hiện) -->
       <div id="exceedLogBox" class="hidden mb-6 bg-red-950/30 border border-red-800/60 rounded-xl p-4">
-        <h3 class="text-xs font-bold text-red-300 uppercase mb-2">Nhat ky cac lan vuot nguong trong ngay</h3>
+        <h3 class="text-xs font-bold text-red-300 uppercase mb-2">Nhật ký các lần vượt ngưỡng trong ngày</h3>
         <div class="overflow-x-auto max-h-48">
           <table class="w-full text-left text-xs">
             <thead>
               <tr class="border-b border-red-900/50 text-slate-400">
-                <th class="py-1.5 px-2">Thoi gian</th>
-                <th class="py-1.5 px-2">Tram</th>
-                <th class="py-1.5 px-2">Thong so</th>
-                <th class="py-1.5 px-2">Gia tri do</th>
-                <th class="py-1.5 px-2">Nguong</th>
+                <th class="py-1.5 px-2">Thời gian</th>
+                <th class="py-1.5 px-2">Trạm</th>
+                <th class="py-1.5 px-2">Thông số</th>
+                <th class="py-1.5 px-2">Giá trị đo</th>
+                <th class="py-1.5 px-2">Ngưỡng</th>
               </tr>
             </thead>
             <tbody id="exceedLogBody" class="divide-y divide-red-900/30"></tbody>
@@ -155,58 +158,65 @@
         </div>
       </div>
 
-      <!-- Bieu do duong -->
+      <!-- Biểu đồ đường -->
       <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700/80">
         <div class="h-72 w-full">
           <canvas id="trendChart"></canvas>
         </div>
       </div>
     </div>
-<!-- Thanh mo khoa cai dat -->
+
+    <!-- Thanh mở khóa cài đặt -->
     <div id="configLockBar" class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-3">
       <div class="flex items-center gap-2.5 text-xs text-slate-400">
         <span class="text-base">🔒</span>
-        <span>Khu vuc cai dat tram, nguong canh bao & ntfy dang duoc khoa bao ve.</span>
+        <span>Khu vực cài đặt trạm, ngưỡng cảnh báo & ntfy đang được khóa bảo vệ.</span>
       </div>
       <div class="flex items-center gap-2 shrink-0">
         <button id="showPinBtn" type="button" onclick="showPinBox()" class="bg-slate-700 hover:bg-amber-600 hover:text-slate-950 text-amber-300 font-semibold px-4 py-2 rounded-lg text-xs transition">
-          Mo khoa cai dat (BQL)
+          Mở khóa cài đặt (BQL)
         </button>
         <div id="pinInputBox" class="hidden flex items-center gap-2">
-          <input id="adminPinInput" type="password" inputmode="numeric" maxlength="10" placeholder="Nhap pass..." onkeydown="if(event.key==='Enter') verifyPinAndUnlock()" class="w-32 bg-slate-900 border border-amber-500 outline-none rounded-lg px-3 py-1.5 text-xs text-white text-center tracking-widest" />
+          <input id="adminPinInput" type="password" inputmode="numeric" maxlength="10" placeholder="Nhập pass..." onkeydown="if(event.key==='Enter') verifyPinAndUnlock()" class="w-32 bg-slate-900 border border-amber-500 outline-none rounded-lg px-3 py-1.5 text-xs text-white text-center tracking-widest" />
           <button type="button" onclick="verifyPinAndUnlock()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3.5 py-1.5 rounded-lg text-xs transition">
-            Xac nhan
+            Xác nhận
           </button>
         </div>
       </div>
     </div>
-    <!-- Cai dat cau hinh (An mac dinh cho den khi nhap dung PIN) -->
+
+    <!-- Cài đặt cấu hình (Ẩn mặc định cho đến khi nhập đúng PIN) -->
     <div id="configPanel" class="hidden bg-slate-800 p-6 rounded-xl border border-amber-600/50">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-3">
         <div>
-          <h2 class="text-lg font-semibold text-amber-400">Cai dat tram, nguong canh bao & Dien thoai (ntfy)</h2>
-          <p class="text-xs text-slate-400">Tu dong gui thong bao khan cap toi app ntfy khi chi so vuot ngoai khoang Min - Max</p>
+          <h2 class="text-lg font-semibold text-amber-400">Cài đặt trạm, ngưỡng cảnh báo & Điện thoại (ntfy)</h2>
+          <p class="text-xs text-slate-400">Tự động gửi thông báo khẩn cấp tới app ntfy khi chỉ số vượt ngoài khoảng Min - Max</p>
         </div>
-        <button onclick="testAlert()" class="bg-sky-600 hover:bg-sky-500 text-white px-4 py-2 rounded-lg text-sm font-medium">
-          Gui tin test ve ntfy
-        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="testAlert()" class="bg-sky-600 hover:bg-sky-500 text-white px-4 py-2 rounded-lg text-sm font-medium">
+            Gửi tin test về ntfy
+          </button>
+          <button type="button" onclick="lockConfigPanel()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg text-xs font-medium">
+            Khóa lại
+          </button>
+        </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div>
-          <label class="block text-xs text-slate-400 mb-1">Ten kenh ntfy (Topic tren dien thoai)</label>
+          <label class="block text-xs text-slate-400 mb-1">Tên kênh ntfy (Topic trên điện thoại)</label>
           <input id="ntfyTopic" type="text" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white" />
         </div>
         <div>
-          <label class="block text-xs text-slate-400 mb-1">Chu ky tu dong kiem tra (Phut)</label>
+          <label class="block text-xs text-slate-400 mb-1">Chu kỳ tự động kiểm tra (Phút)</label>
           <input id="intervalMin" type="number" step="0.5" min="1" max="60" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white" />
         </div>
       </div>
 
       <div class="mb-6">
         <div class="flex justify-between items-center mb-2">
-          <label class="text-xs font-semibold text-slate-300 uppercase">Danh sach ma tram (stationKey)</label>
-          <button onclick="addStationRow()" class="text-xs bg-slate-700 hover:bg-slate-600 px-2.5 py-1 rounded text-emerald-300">+ Them tram</button>
+          <label class="text-xs font-semibold text-slate-300 uppercase">Danh sách mã trạm (stationKey)</label>
+          <button onclick="addStationRow()" class="text-xs bg-slate-700 hover:bg-slate-600 px-2.5 py-1 rounded text-emerald-300">+ Thêm trạm</button>
         </div>
         <div id="stationListConfig" class="space-y-2"></div>
       </div>
@@ -215,10 +225,10 @@
         <table class="w-full text-left border-collapse">
           <thead>
             <tr class="border-b border-slate-700 text-xs text-slate-400 uppercase">
-              <th class="py-2 px-3">Thong so</th>
-              <th class="py-2 px-3">Don vi</th>
-              <th class="py-2 px-3">Nguong Duoi (Min)</th>
-              <th class="py-2 px-3">Nguong Tren (Max)</th>
+              <th class="py-2 px-3">Thông số</th>
+              <th class="py-2 px-3">Đơn vị</th>
+              <th class="py-2 px-3">Ngưỡng Dưới (Min)</th>
+              <th class="py-2 px-3">Ngưỡng Trên (Max)</th>
             </tr>
           </thead>
           <tbody id="thresholdTable" class="divide-y divide-slate-700/50 text-sm"></tbody>
@@ -227,13 +237,13 @@
 
       <div class="mt-5 flex justify-end">
         <button onclick="saveConfig()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-6 py-2.5 rounded-lg text-sm transition">
-          Luu cau hinh
+          Lưu cấu hình
         </button>
       </div>
     </div>
 
     <details class="mt-6 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 text-xs text-slate-400">
-      <summary class="cursor-pointer font-medium text-slate-300">Xem cau truc JSON goc tu API So TNMT (Debug)</summary>
+      <summary class="cursor-pointer font-medium text-slate-300">Xem cấu trúc JSON gốc từ API Sở TNMT (Debug)</summary>
       <pre id="rawSample" class="mt-3 whitespace-pre-wrap bg-slate-950 p-3 rounded-lg overflow-x-auto"></pre>
     </details>
   </div>
@@ -247,7 +257,7 @@
     const NTFY_TOKEN = "tk_gej47si15da23mvx3h690ro3jkn0q";
     const sentAlertsClient = new Set();
 
-    // --- HE THONG COI BAO DONG AM THANH (WEB AUDIO API) ---
+    // --- HỆ THỐNG CÒI BÁO ĐỘNG ÂM THANH (WEB AUDIO API) ---
     let audioCtx = null;
     let audioEnabled = true;
     let sirenTimer = null;
@@ -272,13 +282,13 @@
       if (!btn || !txt) return;
       if (!audioEnabled) {
         btn.className = "bg-slate-700 hover:bg-slate-600 text-slate-300 px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5";
-        txt.innerText = "Loa dang tat";
+        txt.innerText = "Loa đang tắt";
       } else if (audioCtx && audioCtx.state === 'running') {
         btn.className = "bg-sky-700 hover:bg-sky-600 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5";
-        txt.innerText = "Loa san sang";
+        txt.innerText = "Loa sẵn sàng";
       } else {
         btn.className = "bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5";
-        txt.innerText = "Bam bat loa";
+        txt.innerText = "Bấm bật loa";
       }
     }
 
@@ -354,7 +364,7 @@
       for (const st of sortedStations) {
         for (const m of st.metrics) {
           if (m.param.toUpperCase() === 'TSS' && m.is_over) {
-            overList.push(`${st.name}: ${m.value} ${m.unit} (Nguong Max: ${m.max})`);
+            overList.push(`${st.name}: ${m.value} ${m.unit} (Ngưỡng Max: ${m.max})`);
           }
         }
       }
@@ -402,7 +412,7 @@
         });
         return res.ok;
       } catch (e) {
-        console.error("Loi gui ntfy:", e);
+        console.error("Lỗi gửi ntfy:", e);
         return false;
       }
     }
@@ -432,7 +442,6 @@
       const st = (latestDashboard.stats || {})[selectedParam] || {};
       const unitStr = st.unit || '';
 
-      // Cap nhat nhan & don vi cho ca 3 the theo tab dang chon
       document.getElementById('kpiCurLabel').innerText = selectedParam;
       document.getElementById('kpiCurUnit').innerText  = unitStr;
       document.getElementById('kpiAvgLabel').innerText = selectedParam;
@@ -440,9 +449,8 @@
       document.getElementById('kpiMaxLabel').innerText = selectedParam;
       document.getElementById('kpiMaxVal').innerText   = st.max !== null && st.max !== undefined ? st.max : '--';
       document.getElementById('kpiMaxUnit').innerText  = unitStr;
-      document.getElementById('kpiLimitVal').innerText = `Nguong: ${st.limit_min ?? '--'} - ${st.limit_max ?? '--'} ${unitStr}`;
+      document.getElementById('kpiLimitVal').innerText = `Ngưỡng: ${st.limit_min ?? '--'} - ${st.limit_max ?? '--'} ${unitStr}`;
 
-      // The 2: Lay gia tri hien tai (moi nhat) cua tung tram theo tab dang chon
       const getCurVal = (stationObj) => {
         if (!stationObj || !stationObj.metrics) return '--';
         const m = stationObj.metrics.find(item => item.param.toLowerCase() === selectedParam.toLowerCase());
@@ -453,12 +461,11 @@
       document.getElementById('kpiCurCT4').innerText  = getCurVal(latestStations[2]);
 
       if (selectedParam === 'Flow') {
-        document.getElementById('kpiCurSub').innerText = `Tong luu luong ngay: ${latestDashboard.total_flow_m3 ?? 0} m³`;
+        document.getElementById('kpiCurSub').innerText = `Tổng lưu lượng ngày: ${latestDashboard.total_flow_m3 ?? 0} m³`;
       } else {
-        document.getElementById('kpiCurSub').innerText = `So lieu do moi nhat tung tram`;
+        document.getElementById('kpiCurSub').innerText = `Số liệu đo mới nhất từng trạm`;
       }
 
-      // The 3: Tinh trung binh ngay rieng cho tung tram theo tab dang chon
       const calcStationAvg = (targetKey) => {
         if (!targetKey) return '--';
         const vals = (latestDashboard.points || [])
@@ -472,9 +479,8 @@
       document.getElementById('kpiAvgCT12').innerText = calcStationAvg(latestStations[0]?.key);
       document.getElementById('kpiAvgCT3').innerText  = calcStationAvg(latestStations[1]?.key);
       document.getElementById('kpiAvgCT4').innerText  = calcStationAvg(latestStations[2]?.key);
-      document.getElementById('kpiMinVal').innerText  = `Thap nhat: ${st.min !== null && st.min !== undefined ? st.min : '--'} ${unitStr}`;
+      document.getElementById('kpiMinVal').innerText  = `Thấp nhất: ${st.min !== null && st.min !== undefined ? st.min : '--'} ${unitStr}`;
 
-      // Bang nhat ky vuot nguong
       const logs = latestDashboard.exceed_logs || [];
       const tbody = document.getElementById('exceedLogBody');
       tbody.innerHTML = logs.length ? logs.map(l => `
@@ -485,9 +491,8 @@
           <td class="py-1.5 px-2 font-bold text-red-300">${l.value} ${l.unit}</td>
           <td class="py-1.5 px-2 text-slate-400">${l.limit}</td>
         </tr>
-      `).join('') : '<tr><td colspan="5" class="py-2 px-2 text-slate-400">Chua ghi nhan lan vuot nguong nao trong ngay.</td></tr>';
+      `).join('') : '<tr><td colspan="5" class="py-2 px-2 text-slate-400">Chưa ghi nhận lần vượt ngưỡng nào trong ngày.</td></tr>';
 
-      // Chuan bi du lieu ve bieu do duong
       const round5Min = (timeStr) => {
         if (!timeStr || !timeStr.includes(':')) return timeStr;
         const [hh, mm] = timeStr.split(':');
@@ -553,7 +558,7 @@
               spanGaps: true
             },
             {
-              label: `Nguong Max (${st.limit_max ?? ''})`,
+              label: `Ngưỡng Max (${st.limit_max ?? ''})`,
               data: limitLine,
               borderColor: '#f87171',
               borderWidth: 1.5,
@@ -582,9 +587,9 @@
       const res = await fetch('/api/data');
       const data = await res.json();
       
-      document.getElementById('lastUpdated').innerText = 'Cap nhat: ' + data.last_updated;
+      document.getElementById('lastUpdated').innerText = 'Cập nhật: ' + data.last_updated;
       document.getElementById('statusBadge').innerText = data.status;
-      document.getElementById('rawSample').innerText = data.raw_sample || 'Chua co mau JSON';
+      document.getElementById('rawSample').innerText = data.raw_sample || 'Chưa có mẫu JSON';
 
       const container = document.getElementById('stationsContainer');
       const getOrder = (st) => {
@@ -601,8 +606,8 @@
             const alertKey = `${st.key}_${m.param}_${st.record_time}`;
             if (!sentAlertsClient.has(alertKey)) {
               sentAlertsClient.add(alertKey);
-              const msg = `Tram: ${st.name}\nThong so ${m.param}: ${m.value} ${m.unit}\nNguong cai dat: ${m.min} - ${m.max} ${m.unit}\nThoi gian do: ${st.record_time}`;
-              pushNtfyDirect(`CANH BAO ${m.param} VUOT NGUONG - MASTERI TD`, msg, true);
+              const msg = `Trạm: ${st.name}\nThông số ${m.param}: ${m.value} ${m.unit}\nNgưỡng cài đặt: ${m.min} - ${m.max} ${m.unit}\nThời gian đo: ${st.record_time}`;
+              pushNtfyDirect(`CẢNH BÁO ${m.param} VƯỢT NGƯỠNG - MASTERI TĐ`, msg, true);
             }
           }
         }
@@ -613,20 +618,20 @@
       container.innerHTML = sortedStations.map(st => `
         <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
           <h3 class="font-bold text-emerald-400 text-base mb-1">${st.name}</h3>
-          <p class="text-[11px] text-slate-400 mb-3 border-b border-slate-700 pb-2">Thoi gian do: ${st.record_time}</p>
+          <p class="text-[11px] text-slate-400 mb-3 border-b border-slate-700 pb-2">Thời gian đo: ${st.record_time}</p>
           <div class="space-y-2.5">
             ${st.metrics.length ? st.metrics.map(m => `
               <div class="flex justify-between items-center p-2.5 rounded-lg ${m.is_over ? 'bg-red-950/80 border border-red-500 animate-pulse' : 'bg-slate-900/80'}">
                 <div>
                   <span class="font-semibold text-sm">${m.param}</span>
-                  <span class="block text-[11px] text-slate-400">Nguong: ${m.min} - ${m.max} ${m.unit}</span>
+                  <span class="block text-[11px] text-slate-400">Ngưỡng: ${m.min} - ${m.max} ${m.unit}</span>
                 </div>
                 <div class="text-right">
                   <span class="text-lg font-bold ${m.is_over ? 'text-red-400' : 'text-emerald-300'}">${m.value}</span>
                   <span class="text-xs text-slate-400 ml-1">${m.unit}</span>
                 </div>
               </div>
-            `).join('') : '<p class="text-xs text-amber-300">Chua khop ten thong so. Mo muc "Xem cau truc JSON goc" ben duoi de kiem tra ten bien.</p>'}
+            `).join('') : '<p class="text-xs text-amber-300">Chưa khớp tên thông số. Mở mục "Xem cấu trúc JSON gốc" bên dưới để kiểm tra tên biến.</p>'}
           </div>
         </div>
       `).join('');
@@ -640,9 +645,9 @@
       const box = document.getElementById('stationListConfig');
       box.innerHTML = stations.map((st, idx) => `
         <div class="grid grid-cols-1 md:grid-cols-12 gap-2 station-row">
-          <input type="text" placeholder="Ten tram" value="${st.name}" class="st-name md:col-span-4 bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-white" />
+          <input type="text" placeholder="Tên trạm" value="${st.name}" class="st-name md:col-span-4 bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-white" />
           <input type="text" placeholder="stationKey" value="${st.key}" class="st-key md:col-span-7 bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-slate-300 font-mono" />
-          <button onclick="this.parentElement.remove()" class="md:col-span-1 bg-red-900/50 hover:bg-red-800 text-red-300 rounded text-xs py-1.5">Xoa</button>
+          <button onclick="this.parentElement.remove()" class="md:col-span-1 bg-red-900/50 hover:bg-red-800 text-red-300 rounded text-xs py-1.5">Xóa</button>
         </div>
       `).join('');
     }
@@ -652,9 +657,9 @@
       const div = document.createElement('div');
       div.className = 'grid grid-cols-1 md:grid-cols-12 gap-2 station-row';
       div.innerHTML = `
-        <input type="text" placeholder="Ten tram moi" class="st-name md:col-span-4 bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-white" />
-        <input type="text" placeholder="Dan stationKey vao day" class="st-key md:col-span-7 bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-slate-300 font-mono" />
-        <button onclick="this.parentElement.remove()" class="md:col-span-1 bg-red-900/50 hover:bg-red-800 text-red-300 rounded text-xs py-1.5">Xoa</button>
+        <input type="text" placeholder="Tên trạm mới" class="st-name md:col-span-4 bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-white" />
+        <input type="text" placeholder="Dán stationKey vào đây" class="st-key md:col-span-7 bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-slate-300 font-mono" />
+        <button onclick="this.parentElement.remove()" class="md:col-span-1 bg-red-900/50 hover:bg-red-800 text-red-300 rounded text-xs py-1.5">Xóa</button>
       `;
       box.appendChild(div);
     }
@@ -681,7 +686,7 @@
       `).join('');
     }
 
-  let verifiedAdminPin = "";
+    let verifiedAdminPin = "";
 
     function showPinBox() {
       document.getElementById('showPinBtn').classList.add('hidden');
@@ -698,7 +703,7 @@
         document.getElementById('configLockBar').classList.add('hidden');
         document.getElementById('configPanel').classList.remove('hidden');
       } else {
-        alert("Sai mat khau! Ban khong co quyen mo khoa cai dat.");
+        alert("Sai mật khẩu! Bạn không có quyền mở khóa cài đặt.");
         inputEl.value = "";
         inputEl.focus();
       }
@@ -714,7 +719,7 @@
 
     async function saveConfig() {
       if (verifiedAdminPin !== "120890") {
-        alert("Vui long mo khoa bang mat khau truoc khi luu!");
+        alert("Vui lòng mở khóa bằng mật khẩu trước khi lưu!");
         return;
       }
 
@@ -750,33 +755,33 @@
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        alert('Da luu cau hinh thanh cong! He thong da tu khoa lai.');
+        alert('Đã lưu cấu hình thành công! Hệ thống đã tự khóa lại.');
         lockConfigPanel();
       } else {
-        alert('Loi luu cau hinh: ' + res.status);
+        alert('Lỗi lưu cấu hình: ' + res.status);
       }
     }
 
     async function forceRefresh() {
-      document.getElementById('statusBadge').innerText = 'Dang keo API...';
+      document.getElementById('statusBadge').innerText = 'Đang kéo API...';
       await fetch('/api/refresh', { method: 'POST' });
       await loadData();
     }
 
     async function testAlert() {
       const ok = await pushNtfyDirect(
-        "TEST CANH BAO - MASTERI THAO DIEN",
-        "He thong Real-time 3 tram Masteri Thao Dien da san sang ban canh bao ve dien thoai!",
+        "TEST CẢNH BÁO - MASTERI THẢO ĐIỀN",
+        "Hệ thống Real-time 3 trạm Masteri Thảo Điền đã sẵn sàng bắn cảnh báo về điện thoại!",
         false
       );
       if (ok) {
-        alert("Da gui thanh cong toi app ntfy tren dien thoai!");
+        alert("Đã gửi thành công tới app ntfy trên điện thoại!");
       } else {
-        alert("Khong gui duoc toi ntfy.sh, vui long kiem tra ket noi mang!");
+        alert("Không gửi được tới ntfy.sh, vui lòng kiểm tra kết nối mạng!");
       }
     }
 
-   let lastPullTimestamp = 0;
+    let lastPullTimestamp = 0;
     let lastPingTimestamp = 0;
     let isPullingNow = false;
 
@@ -785,7 +790,7 @@
       const now = Date.now();
       const intervalMs = Math.max(1, parseFloat(currentConfig.interval_minutes) || 5) * 60 * 1000;
 
-      // Ping giu server Render khong ngu dong moi 3 phut
+      // Ping giữ server Render không ngủ đông mỗi 3 phút
       if (now - lastPingTimestamp >= 3 * 60 * 1000) {
         lastPingTimestamp = now;
         fetch('/api/data').catch(() => {});
@@ -795,13 +800,13 @@
 
       isPullingNow = true;
       try {
-        document.getElementById('statusBadge').innerText = 'Dang keo API...';
+        document.getElementById('statusBadge').innerText = 'Đang kéo API...';
         await fetch('/api/refresh', { method: 'POST' });
         await loadData();
         lastPullTimestamp = Date.now();
       } catch (err) {
-        console.error('Loi keo du lieu tu dong, se thu lai sau 15s:', err);
-        document.getElementById('statusBadge').innerText = 'Mat ket noi - Dang thu lai...';
+        console.error('Lỗi kéo dữ liệu tự động, sẽ thử lại sau 15s:', err);
+        document.getElementById('statusBadge').innerText = 'Mất kết nối - Đang thử lại...';
       } finally {
         isPullingNow = false;
       }
@@ -811,16 +816,16 @@
       try {
         await loadConfig();
       } catch (e) {
-        console.error('Loi tai config:', e);
+        console.error('Lỗi tải config:', e);
       }
       await safePullAndRender(true);
 
-      // Kiem tra dong ho thuc moi 15 giay (chong bi trinh duyet dong bang)
+      // Kiểm tra đồng hồ thực mỗi 15 giây (chống bị trình duyệt đóng băng)
       setInterval(() => {
         safePullAndRender(false);
       }, 15 * 1000);
 
-      // Tu dong cap nhat ngay khi quay lai tab hoac mo man hinh
+      // Tự động cập nhật ngay khi quay lại tab hoặc mở màn hình
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
           safePullAndRender(false);
