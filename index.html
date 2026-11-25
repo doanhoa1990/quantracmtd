@@ -168,11 +168,18 @@
         <span class="text-base">🔒</span>
         <span>Khu vuc cai dat tram, nguong canh bao & ntfy dang duoc khoa bao ve.</span>
       </div>
-      <button onclick="unlockConfigPanel()" class="bg-slate-700 hover:bg-amber-600 hover:text-slate-950 text-amber-300 font-semibold px-4 py-2 rounded-lg text-xs transition shrink-0">
-        Mo khoa cai dat (BQL)
-      </button>
+      <div class="flex items-center gap-2 shrink-0">
+        <button id="showPinBtn" type="button" onclick="showPinBox()" class="bg-slate-700 hover:bg-amber-600 hover:text-slate-950 text-amber-300 font-semibold px-4 py-2 rounded-lg text-xs transition">
+          Mo khoa cai dat (BQL)
+        </button>
+        <div id="pinInputBox" class="hidden flex items-center gap-2">
+          <input id="adminPinInput" type="password" inputmode="numeric" maxlength="10" placeholder="Nhap pass..." onkeydown="if(event.key==='Enter') verifyPinAndUnlock()" class="w-32 bg-slate-900 border border-amber-500 outline-none rounded-lg px-3 py-1.5 text-xs text-white text-center tracking-widest" />
+          <button type="button" onclick="verifyPinAndUnlock()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3.5 py-1.5 rounded-lg text-xs transition">
+            Xac nhan
+          </button>
+        </div>
+      </div>
     </div>
-
     <!-- Cai dat cau hinh (An mac dinh cho den khi nhap dung PIN) -->
     <div id="configPanel" class="hidden bg-slate-800 p-6 rounded-xl border border-amber-600/50">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-3">
@@ -674,7 +681,43 @@
       `).join('');
     }
 
+  let verifiedAdminPin = "";
+
+    function showPinBox() {
+      document.getElementById('showPinBtn').classList.add('hidden');
+      document.getElementById('pinInputBox').classList.remove('hidden');
+      document.getElementById('adminPinInput').focus();
+    }
+
+    function verifyPinAndUnlock() {
+      const inputEl = document.getElementById('adminPinInput');
+      const pin = inputEl ? inputEl.value.trim() : "";
+      if (pin === "120890") {
+        verifiedAdminPin = "120890";
+        inputEl.value = "";
+        document.getElementById('configLockBar').classList.add('hidden');
+        document.getElementById('configPanel').classList.remove('hidden');
+      } else {
+        alert("Sai mat khau! Ban khong co quyen mo khoa cai dat.");
+        inputEl.value = "";
+        inputEl.focus();
+      }
+    }
+
+    function lockConfigPanel() {
+      verifiedAdminPin = "";
+      document.getElementById('configPanel').classList.add('hidden');
+      document.getElementById('pinInputBox').classList.add('hidden');
+      document.getElementById('showPinBtn').classList.remove('hidden');
+      document.getElementById('configLockBar').classList.remove('hidden');
+    }
+
     async function saveConfig() {
+      if (verifiedAdminPin !== "120890") {
+        alert("Vui long mo khoa bang mat khau truoc khi luu!");
+        return;
+      }
+
       const updatedThresholds = {};
       for (const [param, val] of Object.entries(currentConfig.thresholds)) {
         const minVal = parseFloat(document.getElementById(`min_${param}`).value);
@@ -694,6 +737,7 @@
       });
 
       const payload = {
+        pin: verifiedAdminPin,
         ntfy_topic: document.getElementById('ntfyTopic').value.trim() || "MTDQT",
         interval_minutes: parseFloat(document.getElementById('intervalMin').value) || 5,
         stations,
@@ -706,7 +750,8 @@
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        alert('Da luu cau hinh thanh cong!');
+        alert('Da luu cau hinh thanh cong! He thong da tu khoa lai.');
+        lockConfigPanel();
       } else {
         alert('Loi luu cau hinh: ' + res.status);
       }
