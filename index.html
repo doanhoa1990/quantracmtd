@@ -49,32 +49,57 @@
     <!-- 3 Trạm Real-time -->
     <div class="mb-8">
       <div class="flex justify-between items-center mb-3">
-        <h2 class="text-lg font-semibold text-slate-200">Số liệu các trạm quan trắc</h2>
+        <h2 class="text-lg font-semibold text-slate-200">Số liệu các trạm quan trắc (Real-time)</h2>
         <span id="lastUpdated" class="text-xs text-slate-400">Cập nhật: --:--</span>
       </div>
       <div id="stationsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
     </div>
 
-    <!-- Dashboard Thống Kê & Biểu Đồ Trong Ngày -->
+    <!-- Dashboard Thống Kê & Biểu Đồ Trong Ngày / Lịch Sử 24h -->
     <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 mb-8">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-3">
+      <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-5 gap-3">
         <div>
-          <h2 class="text-lg font-semibold text-sky-400">Dashboard Thống Kê & Biểu Đồ Trong Ngày</h2>
-          <p class="text-xs text-slate-400">Tổng hợp nhanh từ lúc mở phiên giám sát trong ngày <span id="dashDate">--/--/----</span></p>
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="text-lg font-semibold text-sky-400">Dashboard Thống Kê & Biểu Đồ 24h</h2>
+            <span id="historyModeBadge" class="hidden text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/50">
+              Đang xem lịch sử
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">Tổng hợp dữ liệu 24 giờ trong ngày <span id="dashDate" class="font-semibold text-slate-200">--/--/----</span></p>
         </div>
-        <div class="flex flex-wrap gap-1.5" id="paramSelector">
-          <button onclick="selectChartParam('TSS')" data-param="TSS" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white">TSS</button>
-          <button onclick="selectChartParam('pH')" data-param="pH" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600">pH</button>
-          <button onclick="selectChartParam('Flow')" data-param="Flow" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600">Lưu lượng</button>
-          <button onclick="selectChartParam('Temp')" data-param="Temp" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600">Nhiệt độ</button>
+
+        <!-- Bộ chọn ngày + Bộ chọn thông số -->
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-lg border border-slate-700">
+            <button id="btnYesterday" type="button" onclick="selectQuickDate(-1)" class="px-2.5 py-1 rounded text-xs font-semibold text-slate-300 hover:bg-slate-700 transition">
+              Hôm qua
+            </button>
+            <button id="btnToday" type="button" onclick="selectQuickDate(0)" class="px-2.5 py-1 rounded text-xs font-semibold bg-sky-600 text-white transition">
+              Hôm nay
+            </button>
+            <input type="date" id="historyDatePicker" onchange="onDatePickerChange(this.value)" class="bg-slate-800 text-slate-200 text-xs rounded px-2 py-1 border border-slate-600 outline-none focus:border-sky-400" />
+          </div>
+
+          <div class="flex flex-wrap gap-1.5" id="paramSelector">
+            <button onclick="selectChartParam('TSS')" data-param="TSS" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white">TSS</button>
+            <button onclick="selectChartParam('pH')" data-param="pH" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600">pH</button>
+            <button onclick="selectChartParam('Flow')" data-param="Flow" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600">Lưu lượng</button>
+            <button onclick="selectChartParam('Temp')" data-param="Temp" class="param-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600">Nhiệt độ</button>
+          </div>
         </div>
+      </div>
+
+      <!-- Thông báo khi ngày được chọn chưa có dữ liệu lưu trữ -->
+      <div id="noHistoryNotice" class="hidden mb-5 bg-amber-950/50 border border-amber-600/60 text-amber-200 px-4 py-3 rounded-xl text-xs flex justify-between items-center">
+        <span>Chưa có dữ liệu lưu trữ cho ngày này (hệ thống chỉ lưu tự động từ thời điểm bật server trở đi).</span>
+        <button onclick="selectQuickDate(0)" class="bg-amber-500 text-slate-950 font-bold px-3 py-1 rounded-lg ml-3 shrink-0">Quay về Hôm nay</button>
       </div>
 
       <!-- 4 Thẻ Counter KPI Đồng Nhất Cho Mỗi Tab -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <!-- Thẻ 1: Số lần vượt ngưỡng -->
         <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
-          <span class="text-xs text-slate-400 block">Số lần vượt ngưỡng hôm nay</span>
+          <span id="kpiExceedTitle" class="text-xs text-slate-400 block">Số lần vượt ngưỡng hôm nay</span>
           <div class="flex items-baseline justify-between mt-1">
             <span id="kpiExceedCount" class="text-2xl font-bold text-red-400">0</span>
             <button onclick="toggleExceedTable()" class="text-xs text-sky-400 hover:underline">Xem chi tiết</button>
@@ -82,10 +107,10 @@
           <span class="text-[11px] text-slate-500 mt-1 block">Tính trên cả 3 trạm</span>
         </div>
 
-        <!-- Thẻ 2: Giá trị hiện tại từng trạm theo tab đang chọn -->
+        <!-- Thẻ 2: Giá trị hiện tại / cuối ngày từng trạm theo tab đang chọn -->
         <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
           <div class="flex justify-between items-center">
-            <span class="text-xs text-slate-400">Hiện tại (<span id="kpiCurLabel">TSS</span>)</span>
+            <span class="text-xs text-slate-400"><span id="kpiCurModeText">Hiện tại</span> (<span id="kpiCurLabel">TSS</span>)</span>
             <span id="kpiCurUnit" class="text-[11px] text-slate-400">mg/L</span>
           </div>
           <div class="grid grid-cols-3 gap-2 mt-2 text-center">
@@ -252,10 +277,93 @@
     let currentConfig = {};
     let latestDashboard = null;
     let latestStations = [];
+    let dashboardStations = [];
     let selectedParam = 'TSS';
     let trendChartInstance = null;
     const NTFY_TOKEN = "tk_gej47si15da23mvx3h690ro3jkn0q";
     const sentAlertsClient = new Set();
+
+    // --- QUẢN LÝ CHỌN NGÀY LỊCH SỬ ---
+    function getVNDateISO(offsetDays = 0) {
+      const now = new Date();
+      now.setDate(now.getDate() + offsetDays);
+      return now.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+    }
+
+    let selectedDateISO = getVNDateISO(0);
+
+    function isViewingToday() {
+      return selectedDateISO === getVNDateISO(0);
+    }
+
+    function updateDateButtonsUI() {
+      const todayISO = getVNDateISO(0);
+      const yesterdayISO = getVNDateISO(-1);
+      const btnToday = document.getElementById('btnToday');
+      const btnYesterday = document.getElementById('btnYesterday');
+      const picker = document.getElementById('historyDatePicker');
+      const badge = document.getElementById('historyModeBadge');
+
+      if (picker) {
+        picker.max = todayISO;
+        picker.value = selectedDateISO;
+      }
+
+      if (selectedDateISO === todayISO) {
+        btnToday.className = "px-2.5 py-1 rounded text-xs font-semibold bg-sky-600 text-white transition";
+        btnYesterday.className = "px-2.5 py-1 rounded text-xs font-semibold text-slate-300 hover:bg-slate-700 transition";
+        badge.classList.add('hidden');
+      } else if (selectedDateISO === yesterdayISO) {
+        btnToday.className = "px-2.5 py-1 rounded text-xs font-semibold text-slate-300 hover:bg-slate-700 transition";
+        btnYesterday.className = "px-2.5 py-1 rounded text-xs font-semibold bg-amber-500 text-slate-950 transition";
+        badge.classList.remove('hidden');
+      } else {
+        btnToday.className = "px-2.5 py-1 rounded text-xs font-semibold text-slate-300 hover:bg-slate-700 transition";
+        btnYesterday.className = "px-2.5 py-1 rounded text-xs font-semibold text-slate-300 hover:bg-slate-700 transition";
+        badge.classList.remove('hidden');
+      }
+    }
+
+    async function selectQuickDate(offsetDays) {
+      selectedDateISO = getVNDateISO(offsetDays);
+      updateDateButtonsUI();
+      await loadDashboardForSelectedDate();
+    }
+
+    async function onDatePickerChange(dateVal) {
+      if (!dateVal) return;
+      selectedDateISO = dateVal;
+      updateDateButtonsUI();
+      await loadDashboardForSelectedDate();
+    }
+
+    async function loadDashboardForSelectedDate() {
+      const todayISO = getVNDateISO(0);
+      const noticeEl = document.getElementById('noHistoryNotice');
+
+      if (selectedDateISO === todayISO) {
+        if (noticeEl) noticeEl.classList.add('hidden');
+        await loadData();
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/data?date=${encodeURIComponent(selectedDateISO)}`);
+        const histData = await res.json();
+        if (noticeEl) {
+          if (histData.has_data === false) {
+            noticeEl.classList.remove('hidden');
+          } else {
+            noticeEl.classList.add('hidden');
+          }
+        }
+        dashboardStations = (histData.stations && histData.stations.length) ? histData.stations : latestStations;
+        latestDashboard = histData.dashboard;
+        renderDashboard();
+      } catch (e) {
+        console.error('Lỗi tải dữ liệu lịch sử:', e);
+      }
+    }
 
     // --- HỆ THỐNG CÒI BÁO ĐỘNG ÂM THANH (WEB AUDIO API) ---
     let audioCtx = null;
@@ -436,7 +544,10 @@
 
     function renderDashboard() {
       if (!latestDashboard) return;
+      const onToday = isViewingToday();
       document.getElementById('dashDate').innerText = latestDashboard.date || '--/--/----';
+      document.getElementById('kpiExceedTitle').innerText = onToday ? 'Số lần vượt ngưỡng hôm nay' : 'Số lần vượt ngưỡng trong ngày';
+      document.getElementById('kpiCurModeText').innerText = onToday ? 'Hiện tại' : 'Cuối ngày';
       document.getElementById('kpiExceedCount').innerText = latestDashboard.exceed_count ?? 0;
 
       const st = (latestDashboard.stats || {})[selectedParam] || {};
@@ -451,19 +562,20 @@
       document.getElementById('kpiMaxUnit').innerText  = unitStr;
       document.getElementById('kpiLimitVal').innerText = `Ngưỡng: ${st.limit_min ?? '--'} - ${st.limit_max ?? '--'} ${unitStr}`;
 
+      const refStations = dashboardStations.length ? dashboardStations : latestStations;
       const getCurVal = (stationObj) => {
         if (!stationObj || !stationObj.metrics) return '--';
         const m = stationObj.metrics.find(item => item.param.toLowerCase() === selectedParam.toLowerCase());
         return m && m.value !== undefined && m.value !== null ? m.value : '--';
       };
-      document.getElementById('kpiCurCT12').innerText = getCurVal(latestStations[0]);
-      document.getElementById('kpiCurCT3').innerText  = getCurVal(latestStations[1]);
-      document.getElementById('kpiCurCT4').innerText  = getCurVal(latestStations[2]);
+      document.getElementById('kpiCurCT12').innerText = getCurVal(refStations[0]);
+      document.getElementById('kpiCurCT3').innerText  = getCurVal(refStations[1]);
+      document.getElementById('kpiCurCT4').innerText  = getCurVal(refStations[2]);
 
       if (selectedParam === 'Flow') {
         document.getElementById('kpiCurSub').innerText = `Tổng lưu lượng ngày: ${latestDashboard.total_flow_m3 ?? 0} m³`;
       } else {
-        document.getElementById('kpiCurSub').innerText = `Số liệu đo mới nhất từng trạm`;
+        document.getElementById('kpiCurSub').innerText = onToday ? `Số liệu đo mới nhất từng trạm` : `Số liệu chốt cuối ngày từng trạm`;
       }
 
       const calcStationAvg = (targetKey) => {
@@ -476,9 +588,9 @@
         const sum = vals.reduce((a, b) => a + b, 0);
         return (sum / vals.length).toFixed(2);
       };
-      document.getElementById('kpiAvgCT12').innerText = calcStationAvg(latestStations[0]?.key);
-      document.getElementById('kpiAvgCT3').innerText  = calcStationAvg(latestStations[1]?.key);
-      document.getElementById('kpiAvgCT4').innerText  = calcStationAvg(latestStations[2]?.key);
+      document.getElementById('kpiAvgCT12').innerText = calcStationAvg(refStations[0]?.key);
+      document.getElementById('kpiAvgCT3').innerText  = calcStationAvg(refStations[1]?.key);
+      document.getElementById('kpiAvgCT4').innerText  = calcStationAvg(refStations[2]?.key);
       document.getElementById('kpiMinVal').innerText  = `Thấp nhất: ${st.min !== null && st.min !== undefined ? st.min : '--'} ${unitStr}`;
 
       const logs = latestDashboard.exceed_logs || [];
@@ -506,9 +618,9 @@
       }));
       const timeLabels = [...new Set(points.map(p => p.bucketTime))];
 
-      const keyCT12 = latestStations[0]?.key || '';
-      const keyCT3  = latestStations[1]?.key || '';
-      const keyCT4  = latestStations[2]?.key || '';
+      const keyCT12 = refStations[0]?.key || '';
+      const keyCT3  = refStations[1]?.key || '';
+      const keyCT4  = refStations[2]?.key || '';
 
       const buildSeries = (targetKey) => {
         return timeLabels.map(t => {
@@ -637,8 +749,15 @@
       `).join('');
 
       latestStations = sortedStations;
-      latestDashboard = data.dashboard;
-      renderDashboard();
+
+      // Chỉ cập nhật biểu đồ Dashboard nếu người dùng đang ở tab "Hôm nay"
+      if (isViewingToday()) {
+        const noticeEl = document.getElementById('noHistoryNotice');
+        if (noticeEl) noticeEl.classList.add('hidden');
+        dashboardStations = sortedStations;
+        latestDashboard = data.dashboard;
+        renderDashboard();
+      }
     }
 
     function renderStationInputs(stations) {
@@ -790,7 +909,6 @@
       const now = Date.now();
       const intervalMs = Math.max(1, parseFloat(currentConfig.interval_minutes) || 5) * 60 * 1000;
 
-      // Ping giữ server Render không ngủ đông mỗi 3 phút
       if (now - lastPingTimestamp >= 3 * 60 * 1000) {
         lastPingTimestamp = now;
         fetch('/api/data').catch(() => {});
@@ -813,6 +931,7 @@
     }
 
     async function startAutoLoop() {
+      updateDateButtonsUI();
       try {
         await loadConfig();
       } catch (e) {
@@ -820,12 +939,10 @@
       }
       await safePullAndRender(true);
 
-      // Kiểm tra đồng hồ thực mỗi 15 giây (chống bị trình duyệt đóng băng)
       setInterval(() => {
         safePullAndRender(false);
       }, 15 * 1000);
 
-      // Tự động cập nhật ngay khi quay lại tab hoặc mở màn hình
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
           safePullAndRender(false);
