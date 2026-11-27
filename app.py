@@ -1,10 +1,12 @@
 import asyncio
+import glob
 import json
 import os
 from datetime import datetime, timedelta
+from typing import Optional
 import requests
 import urllib3
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -16,7 +18,10 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 REALTIME_API = "https://thongtinquantrac.moitruonghcm.vn/api/station-auto-logs?stationType=&shareIds=695e073e750cc3001b730f1d,695e071c750cc3001b730f01,695d1735750cc3001b730582"
 CONFIG_FILE = "config.json"
+HISTORY_DIR = "data_history"
 NTFY_TOKEN = "tk_gej47si15da23mvx3h690ro3jkn0q"
+
+os.makedirs(HISTORY_DIR, exist_ok=True)
 
 DEFAULT_CONFIG = {
     "ntfy_topic": "MTDQT",
@@ -42,7 +47,8 @@ latest_data = {
 
 # Bo dem RAM thong ke trong ngay (tu reset khi qua ngay moi)
 daily_state = {
-    "date": "",
+    "date_iso": "",     # Dinh dang YYYY-MM-DD de luu file
+    "date": "",         # Dinh dang dd/mm/YYYY hien thi UI
     "seen_records": set(),
     "points": [],
     "exceed_logs": [],
@@ -52,13 +58,87 @@ daily_state = {
 def get_vn_now():
     return datetime.utcnow() + timedelta(hours=7)
 
-def reset_daily_if_needed(today_str: str):
-    if daily_state["date"] != today_str:
-        daily_state["date"] = today_str
-        daily_state["seen_records"] = set()
-        daily_state["points"] = []
-        daily_state["exceed_logs"] = []
-        daily_state["flow_tracker"] = {}
+def get_history_filepath(date_iso: str) -> str:
+    safe_date = "".join(c for c in date_iso if c.isdigit() or c == "-")
+    return os.path.join(HISTORY_DIR, f"history_{safe_date}.json")
+
+def cleanup_old_history(keep_days: int = 7):
+    cutoff = (get_vn_now() - timedelta(days=keep_days)).strftime("%Y-%m-%d")
+    for fpath in glob.glob(os.path.join(HISTORY_DIR, "history_*.json")):
+        fname = os.path.basename(fpath)
+        fdate = fname.replace("history_", "").replace(".json", "")
+        if fdate < cutoff:
+            try:
+                os.remove(fpath)
+            except OSError:
+                pass
+
+def save_daily_snapshot(stations_snapshot: list, dashboard_summary: dict):
+    if not daily_state["date_iso"]:
+        return
+    fpath = get_history_filepath(daily_state["date_iso"])
+    flow_serializable = {}
+    for k, v in daily_state["flow_tracker"].items():
+        flow_serializable[k] = {
+            "name": v["name"],
+            "last_dt": v["last_dt"].isoformat() if isinstance(v["last_dt"], datetime) else str(v["last_dt"]),
+            "last_flow": v["last_flow"],
+            "total_m3": v["total_m3"]
+        }
+
+    payload = {
+        "date_iso": daily_state["date_iso"],
+        "date": daily_state["date"],
+        "seen_records": list(daily_state["seen_records"]),
+        "points": daily_state["points"],
+        "exceed_logs": daily_state["exceed_logs"],
+        "flow_tracker": flow_serializable,
+        "stations": stations_snapshot,
+        "dashboard": dashboard_summary
+    }
+    try:
+        with open(fpath, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False)
+        cleanup_old_history(7)
+    except Exception as e:
+        print("Loi luu lich su ngay:", e)
+
+def load_daily_snapshot_into_ram(date_iso: str, date_display: str):
+    fpath = get_history_filepath(date_iso)
+    daily_state["date_iso"] = date_iso
+    daily_state["date"] = date_display
+    daily_state["seen_records"] = set()
+    daily_state["points"] = []
+    daily_state["exceed_logs"] = []
+    daily_state["flow_tracker"] = {}
+
+    if os.path.exists(fpath):
+        try:
+            with open(fpath, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+            daily_state["seen_records"] = set(saved.get("seen_records", []))
+            daily_state["points"] = saved.get("points", [])
+            daily_state["exceed_logs"] = saved.get("exceed_logs", [])
+            ft = {}
+            for k, v in saved.get("flow_tracker", {}).items():
+                try:
+                    dt_parsed = datetime.fromisoformat(v["last_dt"])
+                except Exception:
+                    dt_parsed = get_vn_now()
+                ft[k] = {
+                    "name": v.get("name", k),
+                    "last_dt": dt_parsed,
+                    "last_flow": float(v.get("last_flow", 0.0)),
+                    "total_m3": float(v.get("total_m3", 0.0))
+                }
+            daily_state["flow_tracker"] = ft
+            print(f"[HISTORY RESTORED] Da nap lai {len(daily_state['points'])} diem du lieu ngay {date_display}.")
+        except Exception as e:
+            print("Loi khoi phuc lich su ngay:", e)
+
+def reset_daily_if_needed(today_iso: str, today_display: str):
+    if daily_state["date_iso"] != today_iso:
+        load_daily_snapshot_into_ram(today_iso, today_display)
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -144,7 +224,6 @@ def parse_metrics_from_record(record: dict, thresholds: dict):
     return metrics_list
 
 def build_dashboard_summary(thresholds: dict):
-    # Tinh trung binh va Max trong ngay
     param_vals = {p: [] for p in thresholds.keys()}
     for pt in daily_state["points"]:
         for p, v in pt["values"].items():
@@ -177,7 +256,7 @@ def build_dashboard_summary(thresholds: dict):
         "total_flow_m3": round(total_flow_all, 1),
         "flow_by_station": flow_by_station,
         "stats": stats,
-        "points": daily_state["points"][-300:]
+        "points": daily_state["points"][-900:]  # Du chua tron 24h cho ca 3 tram (288 x 3 = 864 diem)
     }
 
 def fetch_all_stations():
@@ -185,8 +264,9 @@ def fetch_all_stations():
     cfg = load_config()
     thresholds = cfg["thresholds"]
     now_vn = get_vn_now()
+    today_iso = now_vn.strftime("%Y-%m-%d")
     today_str = now_vn.strftime("%d/%m/%Y")
-    reset_daily_if_needed(today_str)
+    reset_daily_if_needed(today_iso, today_str)
 
     headers = {
         "accept": "application/json",
@@ -236,7 +316,6 @@ def fetch_all_stations():
 
             metrics = parse_metrics_from_record(log_obj, thresholds)
 
-            # Ghi nhan vao bo dem RAM trong ngay neu la ban ghi moi
             rec_id = f"{st_key}_{rec_time}"
             if rec_id not in daily_state["seen_records"] and metrics:
                 daily_state["seen_records"].add(rec_id)
@@ -249,7 +328,6 @@ def fetch_all_stations():
                     "values": val_map
                 })
 
-                # Dem so lan vuot nguong
                 for m in metrics:
                     if m["is_over"]:
                         daily_state["exceed_logs"].append({
@@ -261,12 +339,10 @@ def fetch_all_stations():
                             "time": rec_time
                         })
 
-                # Tich phan luu luong trong ngay (m3)
                 if "Flow" in val_map:
                     flow_val = float(val_map["Flow"])
                     tracker = daily_state["flow_tracker"].get(st_key)
                     if tracker is None:
-                        # Khoi tao moc dau tien trong ngay (uoc tinh 5 phut = 5/60 gio)
                         daily_state["flow_tracker"][st_key] = {
                             "name": st_name,
                             "last_dt": dt_vn,
@@ -294,12 +370,15 @@ def fetch_all_stations():
             3 if ("ct4" in x["name"].lower() or "ct3_2" in x["key"].lower()) else 4
         ))
 
+        dash_summary = build_dashboard_summary(thresholds)
+        save_daily_snapshot(station_results, dash_summary)
+
         latest_data = {
             "last_updated": now_vn.strftime("%H:%M:%S - %d/%m/%Y (Gio VN)"),
             "status": f"Ket noi Real-time thanh cong ({len(station_results)} tram)",
             "raw_sample": json.dumps(items[0] if items else data_json, ensure_ascii=False, indent=2)[:2500],
             "stations": station_results,
-            "dashboard": build_dashboard_summary(thresholds)
+            "dashboard": dash_summary
         }
         print(f"[{latest_data['last_updated']}] Da cap nhat Real-time {len(station_results)} tram.")
 
@@ -318,8 +397,42 @@ async def startup_event():
     asyncio.create_task(background_scheduler())
 
 @app.get("/api/data")
-def get_data():
-    return latest_data
+def get_data(date: Optional[str] = Query(default=None)):
+    today_iso = get_vn_now().strftime("%Y-%m-%d")
+    if not date or date == today_iso:
+        return latest_data
+
+    fpath = get_history_filepath(date)
+    if not os.path.exists(fpath):
+        try:
+            disp = datetime.strptime(date, "%Y-%m-%d").strftime("%d/%m/%Y")
+        except Exception:
+            disp = date
+        return {
+            "is_history": True,
+            "has_data": False,
+            "date_iso": date,
+            "stations": latest_data.get("stations", []),
+            "dashboard": {
+                "date": disp,
+                "exceed_count": 0,
+                "exceed_logs": [],
+                "total_flow_m3": 0,
+                "flow_by_station": {},
+                "stats": {},
+                "points": []
+            }
+        }
+
+    with open(fpath, "r", encoding="utf-8") as f:
+        saved = json.load(f)
+    return {
+        "is_history": True,
+        "has_data": True,
+        "date_iso": date,
+        "stations": saved.get("stations", []),
+        "dashboard": saved.get("dashboard", {})
+    }
 
 @app.post("/api/refresh")
 async def force_refresh():
